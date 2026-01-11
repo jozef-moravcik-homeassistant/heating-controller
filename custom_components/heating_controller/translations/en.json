@@ -212,6 +212,22 @@
       },
       "controll_command_hp_temperature": {
         "name": "HP Control - Temperature"
+      },
+      "current_operating_mode": {
+        "name": "Current Operating Mode"
+      },
+      "current_operating_mode_text": {
+        "name": "Current Operating Mode (text)",
+        "state": {
+          "error": "Error",
+          "idle": "Idle",
+          "heating_acc": "Heating ACC",
+          "heating_dhw": "Heating DHW",
+          "dhw_from_acc": "Heating DHW from ACC (pumping water only)",
+          "acc_and_dhw_from_acc": "Heating ACC + DHW from ACC (water pumping)",
+          "dhw_and_dhw_from_acc": "Heating DHW + DHW from ACC (water pumping)",
+          "undefined": "Undefined"
+        }
       }
     },
     "number": {

@@ -214,6 +214,22 @@
       },
       "controll_command_hp_temperature": {
         "name": "Riadenie TČ - Teplota"
+      },
+      "current_operating_mode": {
+        "name": "Aktuálny prevádzkový režim"
+      },
+      "current_operating_mode_text": {
+        "name": "Aktuálny prevádzkový režim (text)",
+        "state": {
+          "error": "Chyba",
+          "idle": "Nečinný",
+          "heating_acc": "Ohrev ACC",
+          "heating_dhw": "Ohrev TÚV",
+          "dhw_from_acc": "Ohrev TÚV z ACC (len prečerpávanie)",
+          "acc_and_dhw_from_acc": "Ohrev ACC + TÚV z ACC (prečerpávanie)",
+          "dhw_and_dhw_from_acc": "Ohrev TÚV + TÚV z ACC (prečerpávanie)",
+          "undefined": "Nedefinovaný"
+        }
       }
     },
     "number": {
