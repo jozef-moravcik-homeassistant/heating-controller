@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -55,23 +55,6 @@ async def async_setup_entry(
             "TC - Temperature",
             "mdi:thermometer-water",
         ),
-        HeatingControllerSensor(
-            instance,
-            entry.entry_id,
-            ENTITY_CURRENT_OPERATING_MODE,
-            "Current Operating mode",
-            "mdi:arrow-decision",
-        ),
-        HeatingControllerSensor(
-            instance,
-            entry.entry_id,
-            ENTITY_CURRENT_OPERATING_MODE_TEXT,
-            "Current Operating mode (text)",
-            "mdi:arrow-decision",
-            device_class=SensorDeviceClass.ENUM,
-            options=CURRENT_OPERATING_MODE_TEXT_OPTIONS,
-            default_value=CURRENT_OPERATING_MODE_UNDEFINED_TEXT,
-        ),
     ]
 
     async_add_entities(entities)
@@ -86,9 +69,6 @@ class HeatingControllerSensor(SensorEntity):
         entity_id: str,
         name: str,
         icon: str,
-        device_class: SensorDeviceClass | None = None,
-        options: list[str] | None = None,
-        default_value: str = "off",
     ) -> None:
         """Initialize the sensor."""
         self._instance = instance
@@ -99,12 +79,7 @@ class HeatingControllerSensor(SensorEntity):
         self.entity_id = f"sensor.{DOMAIN}_{entity_id}"
         self._attr_icon = icon
         self._entity_id = entity_id
-        self._attr_native_value = default_value
-        
-        if device_class is not None:
-            self._attr_device_class = device_class
-        if options is not None:
-            self._attr_options = options
+        self._attr_native_value = "off"
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
