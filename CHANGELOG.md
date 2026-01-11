@@ -15,14 +15,14 @@ the system enables heating. If the temperature in ACC drops below 33 degrees Cel
 # Two new sensors have been added:
 1. sensor.heating_controller_current_operating_mode indicates ID of a current operating mode of the heating controller logic. All IDs are listed in this table:
 
-  # -1 = "Error"
-  # 0 = "Undefined"
-  # 1 = "Idle"
-  # 2 = "Heating ACC"
-  # 3 = "Heating DHW"
-  # 4 = "Heating DHW from ACC (pumping water only)"
-  # 5 = "Heating ACC + DHW from ACC (water pumping)"
-  # 6 = "Heating DHW + DHW from ACC (water pumping)"
+  ### -1 = "Error"
+  ### 0 = "Undefined"
+  ### 1 = "Idle"
+  ### 2 = "Heating ACC"
+  ### 3 = "Heating DHW"
+  ### 4 = "Heating DHW from ACC (pumping water only)"
+  ### 5 = "Heating ACC + DHW from ACC (water pumping)"
+  ### 6 = "Heating DHW + DHW from ACC (water pumping)"
 
 2. sensor.heating_controller_current_operating_mode_text indicates TEXT value of a current operating mode
 
@@ -37,3 +37,4 @@ the system enables heating. If the temperature in ACC drops below 33 degrees Cel
  
 
  
+
