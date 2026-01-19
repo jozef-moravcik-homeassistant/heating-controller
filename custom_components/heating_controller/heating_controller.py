@@ -1636,7 +1636,6 @@ class Heating_Controller_Instance:
 # ********************** KONIEC LOGIKY CONTROLLERA *****************************************
 # ******************************************************************************************
 
-            async_dispatcher_send(self.hass, f"{DOMAIN}_feedback_update_{self._entry_id}")
             LOGGER.debug("Control cycle completed with sucess")
             
         except Exception as e:
@@ -1661,6 +1660,9 @@ class Heating_Controller_Instance:
                 self.sensor_states[ENTITY_CURRENT_OPERATING_MODE_TEXT] = CURRENT_OPERATING_MODE_DHW_AND_DHW_FROM_ACC_TEXT
             else:
                 self.sensor_states[ENTITY_CURRENT_OPERATING_MODE_TEXT] = CURRENT_OPERATING_MODE_UNDEFINED_TEXT
+
+            # Aktualizácia všetkých sensorov cez dispatcher
+            async_dispatcher_send(self.hass, f"{DOMAIN}_feedback_update_{self._entry_id}")
 
             self._is_running = False
 

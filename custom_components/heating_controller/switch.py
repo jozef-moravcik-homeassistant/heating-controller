@@ -11,18 +11,43 @@ import logging
 from typing import Any
 from datetime import timedelta
 
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.switch import SwitchEntity, SwitchDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory, DeviceInfo
 
 from .const import *
 
 LOGGER = logging.getLogger(__name__)
+
+async def _load_translations(hass: HomeAssistant) -> dict:
+    """Load translations for the current language."""
+    import json
+    import os
+    
+    def _load_file():
+        try:
+            language = hass.config.language if hass else "en"
+            
+            # Skúsiť načítať translations súbor pre daný jazyk
+            translations_path = os.path.join(os.path.dirname(__file__), "translations", f"{language}.json")
+            
+            # Ak neexistuje pre daný jazyk, použiť strings.json ako fallback
+            if not os.path.exists(translations_path):
+                translations_path = os.path.join(os.path.dirname(__file__), "strings.json")
+            
+            if os.path.exists(translations_path):
+                with open(translations_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {}
+    
+    return await hass.async_add_executor_job(_load_file)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -31,75 +56,95 @@ async def async_setup_entry(
 ) -> None:
     """Set up Heating Controller switch entities."""
     instance = hass.data[DOMAIN][entry.entry_id]["instance"]
+    
+    # Načítať translations asynchrónne
+    translations = await _load_translations(hass)
 
     entities = [
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_AUTOMATIC_MODE,
-            "Automatic mode",
-            "mdi:auto-mode",
-            initial_state=True,
-            restore_state=True,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_AUTOMATIC_MODE,
+            name = "Automatic mode",
+            translations = translations,
+            icon = "mdi:auto-mode",
+            icon_off = "mdi:stop-circle-outline",
+            initial_state = True,
+            restore_state = True,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_ACC1_ENABLE,
-            "ACC 1 - ON/OFF",
-            "mdi:numeric-1-box",
-            initial_state=True,
-            icon_off="mdi:numeric-1-box-outline",
-            restore_state=True,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_ACC1_ENABLE,
+            name = "ACC 1 - ON/OFF",
+            translations = translations,
+            icon = "mdi:numeric-1-box",
+            icon_off = "mdi:numeric-1-box-outline",
+            initial_state = True,
+            restore_state = True,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_ACC2_ENABLE,
-            "ACC 2 - ON/OFF",
-            "mdi:numeric-2-box",
-            initial_state=True,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_ACC2_ENABLE,
+            name = "ACC 2 - ON/OFF",
+            translations = translations,
+            icon = "mdi:numeric-2-box",
             icon_off="mdi:numeric-2-box-outline",
-            restore_state=True,
+            initial_state = True,
+            restore_state = True,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_HP_ACC,
-            "TC to ACC",
-            "mdi:transfer-right",
-            initial_state=True,
-            restore_state=True,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_HP_ACC,
+            name = "TC to ACC",
+            translations = translations,
+            icon = "mdi:transfer-right",
+            icon_off = "mdi:stop-circle-outline",
+            initial_state = True,
+            restore_state = True,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_HP_DHW,
-            "TC to DHW",
-            "mdi:transfer-right",
-            initial_state=False,
-            restore_state=True,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_HP_DHW,
+            name = "TC to DHW",
+            translations = translations,
+            icon = "mdi:transfer-right",
+            icon_off = "mdi:stop-circle-outline",
+            initial_state = False,
+            restore_state = True,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_HEAT_DHW_FROM_ACC,
-            "Heat DHW from ACC",
-            "mdi:transfer",
-            initial_state=False,
-            restore_state=False,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_HEAT_DHW_FROM_ACC,
+            name = "Heat DHW from ACC",
+            translations = translations,
+            icon = "mdi:transfer",
+            icon_off = "mdi:transfer",
+            initial_state = False,
+            restore_state = False,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-        HeatingControllerSwitch(
+        SwitchEntityDefinition(
             instance,
-            entry.entry_id,
-            ENTITY_HEATING_SOURCE_ON_OFF,
-            "Heating source ON/OFF",            
-            "mdi:hvac",
-            initial_state=True,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_HEATING_SOURCE_ON_OFF,
+            name = "Heating source ON/OFF",
+            translations = translations,
+            icon = "mdi:hvac",
             icon_off="mdi:hvac-off",
-            restore_state=True,
+            initial_state = True,
+            restore_state = True,
+            device_class = SwitchDeviceClass.SWITCH,
         ),
-       
     ]
 
     # Uložím switche do dictionary pre vzájomné prepínanie
@@ -109,8 +154,27 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class HeatingControllerSwitch(SwitchEntity, RestoreEntity):
-    """Representation of a Heating Controller switch."""
+class SwitchEntityDefinition(SwitchEntity, RestoreEntity):
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._entry_id)},
+            name=NAME,
+            manufacturer=MANUFACTURER,
+            model=MODEL,
+            sw_version=VERSION,
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return entity specific state attributes."""
+        return {
+            "integration": DOMAIN,
+            "entry_id": self._entry_id,
+            "entity_id": self._entity_id,
+            "restore_state": self._restore_state,
+        }
 
     def __init__(
         self,
@@ -118,23 +182,46 @@ class HeatingControllerSwitch(SwitchEntity, RestoreEntity):
         entry_id: str,
         entity_id: str,
         name: str,
-        icon: str,
+        translations: dict = None,
+        icon: str = "mdi:toggle-switch-variant",
+        icon_off: str | None = None,
         initial_state: bool = False,
-        icon_off: str = None,
+        enabled_by_default: bool = True,
         restore_state: bool = True,
+        device_class: SwitchDeviceClass | None = None,
+        entity_category: EntityCategory | None = None,
     ) -> None:
         """Initialize the switch."""
         self._instance = instance
         self._entry_id = entry_id
         self._attr_unique_id = f"{DOMAIN}_{entity_id}"
-        self._attr_has_entity_name = True
+        self._attr_has_entity_name = False
         self._attr_translation_key = entity_id
-        self.entity_id = f"switch.{DOMAIN}_{entity_id}"  # Fixed entity_id
+
+        # Načítať názov z preloaded translations
+        if translations:
+            entity_trans = translations.get("entity", {}).get("switch", {}).get(entity_id, {})
+            translated_name = entity_trans.get("name")
+            if translated_name:
+                self._attr_name = translated_name
+            else:
+                self._attr_name = name
+        else:
+            self._attr_name = name
+        
+        self.entity_id = f"switch.{DOMAIN}_{entity_id}"
         self._icon_on = icon
         self._icon_off = icon_off if icon_off else icon
         self._entity_id = entity_id
         self._initial_state = initial_state
         self._attr_is_on = initial_state
+        self._restore_state = restore_state
+        self._attr_entity_registry_enabled_default = enabled_by_default
+        self._attr_entity_registry_visible_default = enabled_by_default
+        if device_class is not None:
+            self._attr_device_class = device_class
+        if entity_category is not None:
+            self._attr_entity_category = entity_category
         self._hass = None
         self._timer_cancel = None
         self._restore_state = restore_state
