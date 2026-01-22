@@ -1242,10 +1242,10 @@ class Heating_Controller_Instance:
                                 if ((thermostat_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
                                     # otvorí sa výstupný ventil 1
                                     self.valve_output_acc1_flag = 1
-                            else:
-                                # ak je aspoň jeden z termostatov v stave kúrenia
-                                if ((heating_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
-                                    self.valve_output_acc1_flag = 1
+#                            else:
+#                                # ak je aspoň jeden z termostatov v stave kúrenia
+#                                if ((heating_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
+#                                    self.valve_output_acc1_flag = 1
                         else:
                             LOGGER.error("Value in 'self.settings.valve_output_acc_strict_mode' = '%s' is invalid.", 
                                     self.settings.valve_output_acc_strict_mode)
@@ -1265,23 +1265,38 @@ class Heating_Controller_Instance:
     # ******************************************************************************************************
 
             self.valve_output_acc2_flag = 0
+            # ak je ACC2 zapnuté, alebo ak je teplota v ACC2 vyššia než minimálna povolená teplota pre kúrenie
             if ((self.acc2_enable) or (temperature_acc2_value > self.settings.disabled_acc_temperature_limit)):
+                # ak nie je preferencia ACC, alebo je preferované ACC2
                 if (self.preferred_output_ACC==0) or (self.preferred_output_ACC==2):
+                    # ak je zapnuté prečerpávanie z ACC do DHW
                     if (self.heat_dhw_from_acc):
+                        # otvorí sa výstupný ventil 2
                         self.valve_output_acc2_flag = 1
+                    # ak nie je zapnuté prečerpávanie z ACC do DHW
                     else:
+                        # ak je mód ventilu GENERIC
                         if (self.settings.valve_output_acc_strict_mode == VALVE_MODE_GENERIC):
+                            # otvorí sa výstupný ventil 2
                             self.valve_output_acc2_flag = 1
+                        # ak je mód ventilu MODERATE
                         elif (self.settings.valve_output_acc_strict_mode == VALVE_MODE_MODERATE):
+                            # ak je zapnutý aspoň jeden z termostatov ON
                             if ((thermostat_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
+                                # otvorí sa výstupný ventil 2
                                 self.valve_output_acc2_flag = 1
+                        # ak je mód ventilu STRICT
                         elif (self.settings.valve_output_acc_strict_mode == VALVE_MODE_STRICT):
+                            # ak je ventil z TC prepnutý do ACC
                             if (not self.hp_dhw):
+                                # ak je zapnutý aspoň jeden z termostatov ON
                                 if ((thermostat_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
+                                    # otvorí sa výstupný ventil 2
                                     self.valve_output_acc2_flag = 1
-                            elif (self.hp_dhw):
-                                if ((heating_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
-                                    self.valve_output_acc2_flag = 1
+#                            else:
+#                                # ak je aspoň jeden z termostatov v stave kúrenia
+#                                if ((heating_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
+#                                    self.valve_output_acc2_flag = 1
                         else:
                             LOGGER.error("Value in 'self.settings.valve_output_acc_strict_mode' = '%s' is invalid.",
                                     self.settings.valve_output_acc_strict_mode)
@@ -1421,9 +1436,9 @@ class Heating_Controller_Instance:
                             self.valve_output_heating_flag = 1
                         else:
                             self.valve_output_heating_flag = 0
-                    elif (self.hp_dhw):
-                        if ((heating_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
-                            self.valve_output_heating_flag = 1
+#                    else:
+#                        if ((heating_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
+#                            self.valve_output_heating_flag = 1
 
                 else:
                     if ((thermostat_state.state == STATE_ON) and (not self.min_acc_temperature_for_heating_limit_broken)):
