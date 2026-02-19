@@ -5,6 +5,11 @@
 
 Home Assistant integration for controlling heating systems with heat pump, accumulation tanks (ACC) and domestic hot water (DHW).
 
+## v1.02.04
+
+### Fixes:
+- Checking sensor availability after HA start/restart
+
 ## v1.02.03
 In real-operation use, it was found that some boiler designs do not use check valves at the ACC outlets, which causes water circulation that also passes through the ACC outlets when the DHW tank is heated by the heat pump. This results in the water in the ACC also heating up during DHW heating, which significantly slows down DHW heating. 
 This version solves this situation by closing the ACC outlet valves in strict mode during DHW heating by the heat pump, thus blocking unwanted circulation of water from DHW. 

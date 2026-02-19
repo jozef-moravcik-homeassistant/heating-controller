@@ -254,15 +254,24 @@ class Heating_Controller_Instance:
                 
                 # Check if Temperature sensor entities are available
                 if temperature_acc1.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc1} is not available (state: {temperature_acc1.state})")
+                    if temperature_acc1.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc1} is not available (state: {temperature_acc1.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc1} is not available (state: {temperature_acc1.state})")
                     return
 
                 if temperature_acc2.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc2} is not available (state: {temperature_acc2.state})")
+                    if temperature_acc2.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc2} is not available (state: {temperature_acc2.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc2} is not available (state: {temperature_acc2.state})")
                     return
 
                 if temperature_dhw.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_dhw} is not available (state: {temperature_dhw.state})")
+                    if temperature_dhw.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_dhw} is not available (state: {temperature_dhw.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_dhw} is not available (state: {temperature_dhw.state})")
                     return
                 
                 # Convert to float
@@ -323,31 +332,52 @@ class Heating_Controller_Instance:
 
                 # Check if valve entities are available
                 if valve_from_hp_to_acc_or_dhw.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_from_hp_to_acc_or_dhw} is not available (state: {valve_from_hp_to_acc_or_dhw.state})")
+                    if valve_from_hp_to_acc_or_dhw.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_from_hp_to_acc_or_dhw} is not available (state: {valve_from_hp_to_acc_or_dhw.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_from_hp_to_acc_or_dhw} is not available (state: {valve_from_hp_to_acc_or_dhw.state})")
                     return
 
                 if valve_output_acc1.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_output_acc1} is not available (state: {valve_output_acc1.state})")
+                    if valve_output_acc1.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_output_acc1} is not available (state: {valve_output_acc1.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_output_acc1} is not available (state: {valve_output_acc1.state})")
                     return
 
                 if valve_output_acc2.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_output_acc2} is not available (state: {valve_output_acc2.state})")
+                    if valve_output_acc2.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_output_acc2} is not available (state: {valve_output_acc2.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_output_acc2} is not available (state: {valve_output_acc2.state})")
                     return
 
                 if valve_input_acc1.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_input_acc1} is not available (state: {valve_input_acc1.state})")
+                    if valve_input_acc1.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_input_acc1} is not available (state: {valve_input_acc1.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_input_acc1} is not available (state: {valve_input_acc1.state})")
                     return
 
                 if valve_input_acc2.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_input_acc2} is not available (state: {valve_input_acc2.state})")
+                    if valve_input_acc2.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_input_acc2} is not available (state: {valve_input_acc2.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_input_acc2} is not available (state: {valve_input_acc2.state})")
                     return
 
                 if valve_from_acc_to_heat_or_dhw.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_from_acc_to_heat_or_dhw} is not available (state: {valve_from_acc_to_heat_or_dhw.state})")
+                    if valve_from_acc_to_heat_or_dhw.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_from_acc_to_heat_or_dhw} is not available (state: {valve_from_acc_to_heat_or_dhw.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_from_acc_to_heat_or_dhw} is not available (state: {valve_from_acc_to_heat_or_dhw.state})")
                     return
 
                 if valve_output_heating.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_valve_output_heating} is not available (state: {valve_output_heating.state})")
+                    if valve_output_heating.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_valve_output_heating} is not available (state: {valve_output_heating.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_valve_output_heating} is not available (state: {valve_output_heating.state})")
                     return
 
             except Exception as e:
@@ -380,19 +410,31 @@ class Heating_Controller_Instance:
 
                 # Check if water pump entities are available
                 if water_pump_acc_output.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_water_pump_acc_output} is not available (state: {water_pump_acc_output.state})")
+                    if water_pump_acc_output.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_water_pump_acc_output} is not available (state: {water_pump_acc_output.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_water_pump_acc_output} is not available (state: {water_pump_acc_output.state})")
                     return
 
                 if water_pump_dhw.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_water_pump_dhw} is not available (state: {water_pump_dhw.state})")
+                    if water_pump_dhw.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_water_pump_dhw} is not available (state: {water_pump_dhw.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_water_pump_dhw} is not available (state: {water_pump_dhw.state})")
                     return
 
                 if water_pump_floor_heating.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_water_pump_floor_heating} is not available (state: {water_pump_floor_heating.state})")
+                    if water_pump_floor_heating.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_water_pump_floor_heating} is not available (state: {water_pump_floor_heating.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_water_pump_floor_heating} is not available (state: {water_pump_floor_heating.state})")
                     return
 
                 if water_pump_heating.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Valve {self.settings.entity_water_pump_heating} is not available (state: {water_pump_heating.state})")
+                    if water_pump_heating.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Valve {self.settings.entity_water_pump_heating} is not available (state: {water_pump_heating.state})")
+                    else:
+                        LOGGER.warning(f"Valve {self.settings.entity_water_pump_heating} is not available (state: {water_pump_heating.state})")
                     return
 
             except Exception as e:
@@ -420,15 +462,24 @@ class Heating_Controller_Instance:
 
                 # Check if Heating System entities are available
                 if thermostat_state.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Heating system entity {self.settings.entity_thermostat_state} is not available (state: {thermostat_state.state})")
+                    if thermostat_state.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Heating system entity {self.settings.entity_thermostat_state} is not available (state: {thermostat_state.state})")
+                    else:
+                        LOGGER.warning(f"Heating system entity {self.settings.entity_thermostat_state} is not available (state: {thermostat_state.state})")
                     return
 
                 if heating_state.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Heating system entity {self.settings.entity_heating_state} is not available (state: {heating_state.state})")
+                    if heating_state.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Heating system entity {self.settings.entity_heating_state} is not available (state: {heating_state.state})")
+                    else:
+                        LOGGER.warning(f"Heating system entity {self.settings.entity_heating_state} is not available (state: {heating_state.state})")
                     return
 
                 if podlahove_stav.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    LOGGER.warning(f"Heating system entity {self.settings.entity_floor_heating_state} is not available (state: {podlahove_stav.state})")
+                    if podlahove_stav.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Heating system entity {self.settings.entity_floor_heating_state} is not available (state: {podlahove_stav.state})")
+                    else:
+                        LOGGER.warning(f"Heating system entity {self.settings.entity_floor_heating_state} is not available (state: {podlahove_stav.state})")
                     return
 
                 LOGGER.debug("External Entity States: thermostat_state=%s, heating_state=%s, podlahove_stav=%s",
