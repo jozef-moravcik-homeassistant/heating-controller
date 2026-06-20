@@ -5,10 +5,28 @@
 
 Home Assistant integration for controlling heating systems with heat pump, accumulation tanks (ACC) and domestic hot water (DHW).
 
+## v1.02.06
+### Fixes:
+- The display of two integer number entities number.heating_controller_dhw_target_temperature and number.heating_controller_acc_target_temperature has changed, the decimal number is no longer displayed.
+
+## v1.02.05
+### Five new sensors have been added to measure stored energy in water tanks:
+- sensor.heating_controller_dhw_stored_energy
+- sensor.heating_controller_acc_stored_energy
+- sensor.heating_controller_acc1_stored_energy
+- sensor.heating_controller_acc2_stored_energy
+- sensor.heating_controller_total_stored_energy
+
+### Changes:
+- number.heating_controller_dhw_target_temperature was changed from SLIDER to BOX
+- number.heating_controller_acc_target_temperature was changed from SLIDER to BOX
+
+
 ## v1.02.04
 
 ### Fixes:
 - Checking sensor availability after HA start/restart
+
 
 ## v1.02.03
 In real-operation use, it was found that some boiler designs do not use check valves at the ACC outlets, which causes water circulation that also passes through the ACC outlets when the DHW tank is heated by the heat pump. This results in the water in the ACC also heating up during DHW heating, which significantly slows down DHW heating. 
