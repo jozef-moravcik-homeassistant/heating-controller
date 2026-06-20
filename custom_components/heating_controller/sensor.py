@@ -16,6 +16,10 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory, DeviceInfo
+from homeassistant.const import (
+    UnitOfEnergy,
+    UnitOfPower
+)
 
 from .const import *
 
@@ -116,6 +120,71 @@ async def async_setup_entry(
             device_class=SensorDeviceClass.ENUM,
             options=CURRENT_OPERATING_MODE_TEXT_OPTIONS,
             default_value=CURRENT_OPERATING_MODE_UNDEFINED_TEXT,
+        ),
+        SensorEntityDefinition(
+            instance,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_ACC1_STORED_ENERGY,
+            name = "ACC1 Stored Energy",
+            translations = translations,
+            icon = "mdi:chart-bar",
+            default_value=0,
+            enabled_by_default = True,
+            state_class = SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+            suggested_display_precision = 1,
+        ),
+        SensorEntityDefinition(
+            instance,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_ACC2_STORED_ENERGY,
+            name = "ACC2 Stored Energy",
+            translations = translations,
+            icon = "mdi:chart-bar",
+            default_value=0,
+            enabled_by_default = True,
+            state_class = SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+            suggested_display_precision = 1,
+        ),
+        SensorEntityDefinition(
+            instance,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_DHW_STORED_ENERGY,
+            name = "DHW Stored Energy",
+            translations = translations,
+            icon = "mdi:chart-bar",
+            default_value=0,
+            enabled_by_default = True,
+            state_class = SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+            suggested_display_precision = 1,
+        ),
+        SensorEntityDefinition(
+            instance,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_ACC_STORED_ENERGY,
+            name = "ACC Stored Energy",
+            translations = translations,
+            icon = "mdi:chart-bar",
+            default_value=0,
+            enabled_by_default = True,
+            state_class = SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+            suggested_display_precision = 1,
+        ),
+        SensorEntityDefinition(
+            instance,
+            entry_id = entry.entry_id,
+            entity_id = ENTITY_TOTAL_STORED_ENERGY,
+            name = "Total Stored Energy",
+            translations = translations,
+            icon = "mdi:chart-bar",
+            default_value=0,
+            enabled_by_default = True,
+            state_class = SensorStateClass.MEASUREMENT,
+            native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+            suggested_display_precision = 1,
         ),
     ]
 

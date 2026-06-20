@@ -8,7 +8,7 @@
 from homeassistant.const import STATE_ON, STATE_OFF, STATE_UNKNOWN, STATE_UNAVAILABLE, STATE_OK, STATE_PROBLEM
 
 DOMAIN = "heating_controller"
-VERSION = "1.02.03"
+VERSION = "1.02.06"
 MANUFACTURER = "Jozef Moravcik"
 MODEL = "For primary heating circuit control"
 NAME = "Heating Controller"
@@ -71,10 +71,23 @@ CONF_VALVE_INPUT_ACC2 = "valve_input_acc2"
 CONF_VALVE_FROM_ACC_TO_HEAT_OR_DHW = "valve_from_acc_to_heat_or_dhw"
 CONF_VALVE_OUTPUT_HEATING = "valve_output_heating"
 
+# Načítanie parametrov pre Stored Energy calculator
+CONF_REFERENCE_TEMP_ACC1 = "reference_temp_acc1"
+CONF_REFERENCE_TEMP_ACC2 = "reference_temp_acc2"
+CONF_REFERENCE_TEMP_DHW = "reference_temp_dhw"
+CONF_VOLUME_ACC1 = "volume_acc1"
+CONF_VOLUME_ACC2 = "volume_acc2"
+CONF_VOLUME_DHW = "volume_dhw"
+
 # Načítanie entít teplotných senzorov z konfigurácie
-CONF_SENSOR_TEMP_ACC1 = "sensor_temp_acc1"
-CONF_SENSOR_TEMP_ACC2 = "sensor_temp_acc2"
-CONF_SENSOR_TEMP_DHW = "sensor_temp_dhw"
+CONF_SENSOR_TEMP_ACC1_TOP = "sensor_temp_acc1_top"
+CONF_SENSOR_TEMP_ACC1_MID = "sensor_temp_acc1_mid"
+CONF_SENSOR_TEMP_ACC1_BOTTOM = "sensor_temp_acc1_bottom"
+CONF_SENSOR_TEMP_ACC2_TOP = "sensor_temp_acc2_top"
+CONF_SENSOR_TEMP_ACC2_MID = "sensor_temp_acc2_mid"
+CONF_SENSOR_TEMP_ACC2_BOTTOM = "sensor_temp_acc2_bottom"
+CONF_SENSOR_TEMP_DHW_TOP = "sensor_temp_dhw_top"
+CONF_SENSOR_TEMP_DHW_BOTTOM = "sensor_temp_dhw_bottom"
 
 # Načítanie entít obehových čerpadiel z konfigurácie
 CONF_WATER_PUMP_ACC_OUTPUT = "water_pump_acc_output"
@@ -105,16 +118,34 @@ ENTITY_CONTROL_COMMAND_HP_ON_OFF = "controll_command_hp_on_off"
 ENTITY_CONTROL_COMMAND_HP_TEMPERATURE = "controll_command_hp_temperature"
 ENTITY_CURRENT_OPERATING_MODE = "current_operating_mode"
 ENTITY_CURRENT_OPERATING_MODE_TEXT = "current_operating_mode_text"
+ENTITY_ACC1_STORED_ENERGY = "acc1_stored_energy"
+ENTITY_ACC2_STORED_ENERGY = "acc2_stored_energy"
+ENTITY_DHW_STORED_ENERGY = "dhw_stored_energy"
+ENTITY_ACC_STORED_ENERGY = "acc_stored_energy"
+ENTITY_TOTAL_STORED_ENERGY = "total_stored_energy"
 
 # Default Values of External entities (Binary Sensors)
 DEFAULT_ENTITY_THERMOSTAT_STATE = "binary_sensor.termostaty_stav"
 DEFAULT_ENTITY_HEATING_STATE = "binary_sensor.kurenie_stav"
 DEFAULT_ENTITY_FLOOR_HEATING_STATE = "binary_sensor.podlahove_kurenie_stav"
 
+# Default Values - Stored Energy calculator
+DEFAULT_REFERENCE_TEMP_ACC1 = 25
+DEFAULT_REFERENCE_TEMP_ACC2 = 25
+DEFAULT_REFERENCE_TEMP_DHW = 25
+DEFAULT_VOLUME_ACC1 = 1500
+DEFAULT_VOLUME_ACC2 = 1500
+DEFAULT_VOLUME_DHW = 285
+
 # Default Values of External entities (Temperature Sensors)
-DEFAULT_ENTITY_TEMP_ACC1 = "sensor.cwt_temperature_sensor_01"
-DEFAULT_ENTITY_TEMP_ACC2 = "sensor.cwt_temperature_sensor_04"
-DEFAULT_ENTITY_TEMP_DHW = "sensor.cwt_temperature_sensor_07"
+DEFAULT_ENTITY_TEMP_ACC1_TOP = ""
+DEFAULT_ENTITY_TEMP_ACC1_MID = ""
+DEFAULT_ENTITY_TEMP_ACC1_BOTTOM = ""
+DEFAULT_ENTITY_TEMP_ACC2_TOP = ""
+DEFAULT_ENTITY_TEMP_ACC2_MID = ""
+DEFAULT_ENTITY_TEMP_ACC2_BOTTOM = ""
+DEFAULT_ENTITY_TEMP_DHW_TOP = ""
+DEFAULT_ENTITY_TEMP_DHW_BOTTOM = ""
 
 # Default Values of External entities (Valves)
 DEFAULT_ENTITY_VALVE_FROM_TC_TO_ACC_OR_DHW = "cover.valve_1"
@@ -253,6 +284,7 @@ DEFAULT_TEMPERATURE_DELTA_LIMIT_ACC_DHW = 2.0
 DEFAULT_DISABLED_ACC_TEMPERATURE_LIMIT = 40
 DEFAULT_MIN_TEMPERATURE_FOR_HEATING = 35
 DEFAULT_HYSTERESIS_MIN_TEMPERATURE_FOR_HEATING = 2.0  # tento parameter nie je nastavitelny v nastaveniach, tato hodnota sa pouziva ako fixna
+FIXED_HYSTERESIS_1 = 0.3  # fixna hysterezia pre balancovanie teploty medzi zasobnikmi ACC1 a ACC2
 DEFAULT_TEMPERATURE_DELTA_LIMIT_IN_ACC = 2.0
 DEFAULT_HEATING_SOURCE_TEMP_HYSTERESIS = 5
 DEFAULT_HEATING_SOURCE_COMMAND_DEBOUNCE_DELAY = 20  # in seconds - it groups all changes within this time period

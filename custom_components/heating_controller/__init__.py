@@ -34,7 +34,7 @@ PLATFORMS: list[Platform] = [Platform.SWITCH, Platform.SENSOR, Platform.NUMBER, 
 
 def _reload_integration_modules():
     """Vymaže a znovu načíta všetky moduly integrácie."""
-    modules_to_reload = [key for key in sys.modules if key.startswith(f"custom_components.{DOMAIN}")]
+    modules_to_reload = [key for key in list(sys.modules.keys()) if key.startswith(f"custom_components.{DOMAIN}")]
     for module_name in modules_to_reload:
         del sys.modules[module_name]
         LOGGER.debug(f"Removed module from cache: {module_name}")
@@ -114,6 +114,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data.get(CONF_AUXILIARY_PUMP_BOOSTER_TIME, DEFAULT_AUXILIARY_PUMP_BOOSTER_TIME)
     )
 
+    # Načítanie konfiguračných parametrov pre Stored Energy Calculator
+    reference_temp_acc1 = entry.options.get(
+        CONF_REFERENCE_TEMP_ACC1,
+        entry.data.get(CONF_REFERENCE_TEMP_ACC1, DEFAULT_REFERENCE_TEMP_ACC1)
+    )
+    reference_temp_acc2 = entry.options.get(
+        CONF_REFERENCE_TEMP_ACC2,
+        entry.data.get(CONF_REFERENCE_TEMP_ACC2, DEFAULT_REFERENCE_TEMP_ACC2)
+    )
+    reference_temp_dhw = entry.options.get(
+        CONF_REFERENCE_TEMP_DHW,
+        entry.data.get(CONF_REFERENCE_TEMP_DHW, DEFAULT_REFERENCE_TEMP_DHW)
+    )
+    volume_acc1 = entry.options.get(
+        CONF_VOLUME_ACC1,
+        entry.data.get(CONF_VOLUME_ACC1, DEFAULT_VOLUME_ACC1)
+    )
+    volume_acc2 = entry.options.get(
+        CONF_VOLUME_ACC2,
+        entry.data.get(CONF_VOLUME_ACC2, DEFAULT_VOLUME_ACC2)
+    )
+    volume_dhw = entry.options.get(
+        CONF_VOLUME_DHW,
+        entry.data.get(CONF_VOLUME_DHW, DEFAULT_VOLUME_DHW)
+    )
+
     # Načítanie parametrov pre ovládanie ventilov
     valve_output_acc_strict_mode = entry.options.get(
         CONF_VALVE_OUTPUT_ACC_STRICT_MODE,
@@ -163,17 +189,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     # Načítanie entít teplotných senzorov z konfigurácie
-    entity_temp_acc1 = entry.options.get(
-        CONF_SENSOR_TEMP_ACC1,
-        entry.data.get(CONF_SENSOR_TEMP_ACC1, DEFAULT_ENTITY_TEMP_ACC1)
+    entity_temp_acc1_top = entry.options.get(
+        CONF_SENSOR_TEMP_ACC1_TOP,
+        entry.data.get(CONF_SENSOR_TEMP_ACC1_TOP, DEFAULT_ENTITY_TEMP_ACC1_TOP)
     )
-    entity_temp_acc2 = entry.options.get(
-        CONF_SENSOR_TEMP_ACC2,
-        entry.data.get(CONF_SENSOR_TEMP_ACC2, DEFAULT_ENTITY_TEMP_ACC2)
+    entity_temp_acc1_mid = entry.options.get(
+        CONF_SENSOR_TEMP_ACC1_MID,
+        entry.data.get(CONF_SENSOR_TEMP_ACC1_MID, DEFAULT_ENTITY_TEMP_ACC1_MID)
     )
-    entity_temp_dhw = entry.options.get(
-        CONF_SENSOR_TEMP_DHW,
-        entry.data.get(CONF_SENSOR_TEMP_DHW, DEFAULT_ENTITY_TEMP_DHW)
+    entity_temp_acc1_bottom = entry.options.get(
+        CONF_SENSOR_TEMP_ACC1_BOTTOM,
+        entry.data.get(CONF_SENSOR_TEMP_ACC1_BOTTOM, DEFAULT_ENTITY_TEMP_ACC1_BOTTOM)
+    )
+    entity_temp_acc2_top = entry.options.get(
+        CONF_SENSOR_TEMP_ACC2_TOP,
+        entry.data.get(CONF_SENSOR_TEMP_ACC2_TOP, DEFAULT_ENTITY_TEMP_ACC2_TOP)
+    )
+    entity_temp_acc2_mid = entry.options.get(
+        CONF_SENSOR_TEMP_ACC2_MID,
+        entry.data.get(CONF_SENSOR_TEMP_ACC2_MID, DEFAULT_ENTITY_TEMP_ACC2_MID)
+    )
+    entity_temp_acc2_bottom = entry.options.get(
+        CONF_SENSOR_TEMP_ACC2_BOTTOM,
+        entry.data.get(CONF_SENSOR_TEMP_ACC2_BOTTOM, DEFAULT_ENTITY_TEMP_ACC2_BOTTOM)
+    )
+    entity_temp_dhw_top = entry.options.get(
+        CONF_SENSOR_TEMP_DHW_TOP,
+        entry.data.get(CONF_SENSOR_TEMP_DHW_TOP, DEFAULT_ENTITY_TEMP_DHW_TOP)
+    )
+    entity_temp_dhw_bottom = entry.options.get(
+        CONF_SENSOR_TEMP_DHW_BOTTOM,
+        entry.data.get(CONF_SENSOR_TEMP_DHW_BOTTOM, DEFAULT_ENTITY_TEMP_DHW_BOTTOM)
     )
     
     # Načítanie entít obehových čerpadiel z konfigurácie
@@ -226,6 +272,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     instance.settings.heating_source_command_debounce_delay = heating_source_command_debounce_delay
     instance.settings.auxiliary_water_pump_for_heating = int(auxiliary_water_pump_for_heating)
     instance.settings.auxiliary_pump_booster_time = auxiliary_pump_booster_time
+    # Načítanie konfiguračných parametrov pre Stored Energy Calculator
+    instance.settings.reference_temp_acc1 = reference_temp_acc1
+    instance.settings.reference_temp_acc2 = reference_temp_acc2
+    instance.settings.reference_temp_dhw = reference_temp_dhw
+    instance.settings.volume_acc1 = volume_acc1
+    instance.settings.volume_acc2 = volume_acc2
+    instance.settings.volume_dhw = volume_dhw
     # Nastavenie parametrov pre ovládanie ventilov
     instance.settings.valve_output_acc_strict_mode = int(valve_output_acc_strict_mode)
     instance.settings.valve_input_acc_strict_mode = int(valve_input_acc_strict_mode)
@@ -240,9 +293,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     instance.settings.entity_valve_from_acc_to_heat_or_dhw = entity_valve_from_acc_to_heat_or_dhw
     instance.settings.entity_valve_output_heating = entity_valve_output_heating
     # Entity teplotných senzorov
-    instance.settings.entity_temp_acc1 = entity_temp_acc1
-    instance.settings.entity_temp_acc2 = entity_temp_acc2
-    instance.settings.entity_temp_dhw = entity_temp_dhw
+    instance.settings.entity_temp_acc1_top = entity_temp_acc1_top
+    instance.settings.entity_temp_acc1_mid = entity_temp_acc1_mid
+    instance.settings.entity_temp_acc1_bottom = entity_temp_acc1_bottom
+    instance.settings.entity_temp_acc2_top = entity_temp_acc2_top
+    instance.settings.entity_temp_acc2_mid = entity_temp_acc2_mid
+    instance.settings.entity_temp_acc2_bottom = entity_temp_acc2_bottom
+    instance.settings.entity_temp_dhw_top = entity_temp_dhw_top
+    instance.settings.entity_temp_dhw_bottom = entity_temp_dhw_bottom
     # Entity obehových čerpadiel
     instance.settings.entity_water_pump_acc_output = entity_water_pump_acc_output
     instance.settings.entity_water_pump_dhw = entity_water_pump_dhw
@@ -266,6 +324,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_HEATING_SOURCE_COMMAND_DEBOUNCE_DELAY: heating_source_command_debounce_delay,
             CONF_AUXILIARY_WATER_PUMP_FOR_HEATING: auxiliary_water_pump_for_heating,
             CONF_AUXILIARY_PUMP_BOOSTER_TIME: auxiliary_pump_booster_time,
+            CONF_REFERENCE_TEMP_ACC1: reference_temp_acc1,
+            CONF_REFERENCE_TEMP_ACC2: reference_temp_acc2,
+            CONF_REFERENCE_TEMP_DHW: reference_temp_dhw,
+            CONF_VOLUME_ACC1: volume_acc1,
+            CONF_VOLUME_ACC2: volume_acc2,
+            CONF_VOLUME_DHW: volume_dhw,
             CONF_VALVE_OUTPUT_ACC_STRICT_MODE: valve_output_acc_strict_mode,
             CONF_VALVE_INPUT_ACC_STRICT_MODE: valve_input_acc_strict_mode,
             CONF_VALVE_INPUT_ACC_CLOSING_DELAY_WHEN_HEATING_SOURCE_STOP: valve_input_acc_closing_delay_when_heating_source_stop,
@@ -277,9 +341,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_VALVE_INPUT_ACC2: entity_valve_input_acc2,
             CONF_VALVE_FROM_ACC_TO_HEAT_OR_DHW: entity_valve_from_acc_to_heat_or_dhw,
             CONF_VALVE_OUTPUT_HEATING: entity_valve_output_heating,
-            CONF_SENSOR_TEMP_ACC1: entity_temp_acc1,
-            CONF_SENSOR_TEMP_ACC2: entity_temp_acc2,
-            CONF_SENSOR_TEMP_DHW: entity_temp_dhw,
+            CONF_SENSOR_TEMP_ACC1_TOP: entity_temp_acc1_top,
+            CONF_SENSOR_TEMP_ACC1_MID: entity_temp_acc1_mid,
+            CONF_SENSOR_TEMP_ACC1_BOTTOM: entity_temp_acc1_bottom,
+            CONF_SENSOR_TEMP_ACC2_TOP: entity_temp_acc2_top,
+            CONF_SENSOR_TEMP_ACC2_MID: entity_temp_acc2_mid,
+            CONF_SENSOR_TEMP_ACC2_BOTTOM: entity_temp_acc2_bottom,
+            CONF_SENSOR_TEMP_DHW_TOP: entity_temp_dhw_top,
+            CONF_SENSOR_TEMP_DHW_BOTTOM: entity_temp_dhw_bottom,
             CONF_WATER_PUMP_ACC_OUTPUT: entity_water_pump_acc_output,
             CONF_WATER_PUMP_DHW: entity_water_pump_dhw,
             CONF_WATER_PUMP_FLOOR_HEATING: entity_water_pump_floor_heating,
@@ -363,9 +432,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             instance.NUMBER_ENTITY_ACC_TARGET_TEMPERATURE,
             instance.SELECT_ENTITY_HEATING_OPERATING_MODE,
             # Teplotné senzory
-            entity_temp_acc1,
-            entity_temp_acc2,
-            entity_temp_dhw,
+            entity_temp_acc1_top,
+            entity_temp_acc1_mid,
+            entity_temp_acc1_bottom,
+            entity_temp_acc2_top,
+            entity_temp_acc2_mid,
+            entity_temp_acc2_bottom,
+            entity_temp_dhw_top,
+            entity_temp_dhw_bottom,
             # Ventily
             entity_valve_from_hp_to_acc_or_dhw,
             entity_valve_output_acc1,
@@ -388,25 +462,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Odstránenie duplicít a None hodnôt
         tracked_entities = list(set(filter(None, tracked_entities)))
 
-        # Plán jednorazových volaní
-        async_call_later(hass, 2, async_update_settings_sensors)
-        
-        # Periodické spúšťanie heating control system každé UPDATE_INTERVAL sekúnd
-        async_call_later(hass, 3, async_run_heating_control)  # Prvé spustenie po 30 sekundách
-        entry.async_on_unload(
+        # Oneskorená inicializácia trackingu a prvého cyklu - počká sa kým sa entity zaregistrujú v HA state machine
+        @callback
+        def _deferred_setup(_now=None):
+            """Nastavenie trackingu a prvého cyklu po registrácii entít."""
+            LOGGER.debug("Deferred setup: registering state tracking and scheduling first run")
 
-            async_track_state_change_event(
-                hass,
-                tracked_entities,
-                async_state_changed
+            async_dispatcher_send(hass, f"{DOMAIN}_settings_update_{entry.entry_id}")
+
+            entry.async_on_unload(
+                async_track_state_change_event(
+                    hass,
+                    tracked_entities,
+                    async_state_changed
+                )
             )
 
-            # async_track_time_interval(
-            #     hass,
-            #     async_run_heating_control,
-            #     timedelta(seconds=UPDATE_INTERVAL)
-            # )
-        )
+            hass.async_create_task(instance.heating_control_system())
+
+        async_call_later(hass, 5, _deferred_setup)
 
 
         # Voliteľný fallback - periodická kontrola každých 60 sekúnd pre bezpečnosť
@@ -492,6 +566,32 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
         entry.data.get(CONF_AUXILIARY_PUMP_BOOSTER_TIME, DEFAULT_AUXILIARY_PUMP_BOOSTER_TIME)
     )
 
+    # Načítanie konfiguračných parametrov pre Stored Energy Calculator
+    reference_temp_acc1 = entry.options.get(
+        CONF_REFERENCE_TEMP_ACC1,
+        entry.data.get(CONF_REFERENCE_TEMP_ACC1, DEFAULT_REFERENCE_TEMP_ACC1)
+    )
+    reference_temp_acc2 = entry.options.get(
+        CONF_REFERENCE_TEMP_ACC2,
+        entry.data.get(CONF_REFERENCE_TEMP_ACC2, DEFAULT_REFERENCE_TEMP_ACC2)
+    )
+    reference_temp_dhw = entry.options.get(
+        CONF_REFERENCE_TEMP_DHW,
+        entry.data.get(CONF_REFERENCE_TEMP_DHW, DEFAULT_REFERENCE_TEMP_DHW)
+    )
+    volume_acc1 = entry.options.get(
+        CONF_VOLUME_ACC1,
+        entry.data.get(CONF_VOLUME_ACC1, DEFAULT_VOLUME_ACC1)
+    )
+    volume_acc2 = entry.options.get(
+        CONF_VOLUME_ACC2,
+        entry.data.get(CONF_VOLUME_ACC2, DEFAULT_VOLUME_ACC2)
+    )
+    volume_dhw = entry.options.get(
+        CONF_VOLUME_DHW,
+        entry.data.get(CONF_VOLUME_DHW, DEFAULT_VOLUME_DHW)
+    )
+
     # Načítanie parametrov pre ovládanie ventilov
     valve_output_acc_strict_mode = entry.options.get(
         CONF_VALVE_OUTPUT_ACC_STRICT_MODE,
@@ -541,17 +641,37 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     )
     
     # Načítanie entít teplotných senzorov z konfigurácie
-    entity_temp_acc1 = entry.options.get(
-        CONF_SENSOR_TEMP_ACC1,
-        entry.data.get(CONF_SENSOR_TEMP_ACC1, DEFAULT_ENTITY_TEMP_ACC1)
+    entity_temp_acc1_top = entry.options.get(
+        CONF_SENSOR_TEMP_ACC1_TOP,
+        entry.data.get(CONF_SENSOR_TEMP_ACC1_TOP, DEFAULT_ENTITY_TEMP_ACC1_TOP)
     )
-    entity_temp_acc2 = entry.options.get(
-        CONF_SENSOR_TEMP_ACC2,
-        entry.data.get(CONF_SENSOR_TEMP_ACC2, DEFAULT_ENTITY_TEMP_ACC2)
+    entity_temp_acc1_mid = entry.options.get(
+        CONF_SENSOR_TEMP_ACC1_MID,
+        entry.data.get(CONF_SENSOR_TEMP_ACC1_MID, DEFAULT_ENTITY_TEMP_ACC1_MID)
     )
-    entity_temp_dhw = entry.options.get(
-        CONF_SENSOR_TEMP_DHW,
-        entry.data.get(CONF_SENSOR_TEMP_DHW, DEFAULT_ENTITY_TEMP_DHW)
+    entity_temp_acc1_bottom = entry.options.get(
+        CONF_SENSOR_TEMP_ACC1_BOTTOM,
+        entry.data.get(CONF_SENSOR_TEMP_ACC1_BOTTOM, DEFAULT_ENTITY_TEMP_ACC1_BOTTOM)
+    )
+    entity_temp_acc2_top = entry.options.get(
+        CONF_SENSOR_TEMP_ACC2_TOP,
+        entry.data.get(CONF_SENSOR_TEMP_ACC2_TOP, DEFAULT_ENTITY_TEMP_ACC2_TOP)
+    )
+    entity_temp_acc2_mid = entry.options.get(
+        CONF_SENSOR_TEMP_ACC2_MID,
+        entry.data.get(CONF_SENSOR_TEMP_ACC2_MID, DEFAULT_ENTITY_TEMP_ACC2_MID)
+    )
+    entity_temp_acc2_bottom = entry.options.get(
+        CONF_SENSOR_TEMP_ACC2_BOTTOM,
+        entry.data.get(CONF_SENSOR_TEMP_ACC2_BOTTOM, DEFAULT_ENTITY_TEMP_ACC2_BOTTOM)
+    )
+    entity_temp_dhw_top = entry.options.get(
+        CONF_SENSOR_TEMP_DHW_TOP,
+        entry.data.get(CONF_SENSOR_TEMP_DHW_TOP, DEFAULT_ENTITY_TEMP_DHW_TOP)
+    )
+    entity_temp_dhw_bottom = entry.options.get(
+        CONF_SENSOR_TEMP_DHW_BOTTOM,
+        entry.data.get(CONF_SENSOR_TEMP_DHW_BOTTOM, DEFAULT_ENTITY_TEMP_DHW_BOTTOM)
     )
     
     # Načítanie entít obehových čerpadiel z konfigurácie
@@ -604,6 +724,13 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 instance.settings.heating_source_command_debounce_delay = heating_source_command_debounce_delay
                 instance.settings.auxiliary_water_pump_for_heating = int(auxiliary_water_pump_for_heating)
                 instance.settings.auxiliary_pump_booster_time = auxiliary_pump_booster_time
+                # Nastavenie parametrov pre Stored Energy Calculator
+                instance.settings.reference_temp_acc1 = reference_temp_acc1
+                instance.settings.reference_temp_acc2 = reference_temp_acc2
+                instance.settings.reference_temp_dhw = reference_temp_dhw
+                instance.settings.volume_acc1 = volume_acc1
+                instance.settings.volume_acc2 = volume_acc2
+                instance.settings.volume_dhw = volume_dhw
                 # Nastavenie parametrov pre ovládanie ventilov
                 instance.settings.valve_output_acc_strict_mode = int(valve_output_acc_strict_mode)
                 instance.settings.valve_input_acc_strict_mode = int(valve_input_acc_strict_mode)
@@ -618,9 +745,14 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 instance.settings.entity_valve_from_acc_to_heat_or_dhw = entity_valve_from_acc_to_heat_or_dhw
                 instance.settings.entity_valve_output_heating = entity_valve_output_heating
                 # Entity teplotných senzorov
-                instance.settings.entity_temp_acc1 = entity_temp_acc1
-                instance.settings.entity_temp_acc2 = entity_temp_acc2
-                instance.settings.entity_temp_dhw = entity_temp_dhw
+                instance.settings.entity_temp_acc1_top = entity_temp_acc1_top
+                instance.settings.entity_temp_acc1_mid = entity_temp_acc1_mid
+                instance.settings.entity_temp_acc1_bottom = entity_temp_acc1_bottom
+                instance.settings.entity_temp_acc2_top = entity_temp_acc2_top
+                instance.settings.entity_temp_acc2_mid = entity_temp_acc2_mid
+                instance.settings.entity_temp_acc2_bottom = entity_temp_acc2_bottom
+                instance.settings.entity_temp_dhw_top = entity_temp_dhw_top
+                instance.settings.entity_temp_dhw_bottom = entity_temp_dhw_bottom
                 # Entity obehových čerpadiel
                 instance.settings.entity_water_pump_acc_output = entity_water_pump_acc_output
                 instance.settings.entity_water_pump_dhw = entity_water_pump_dhw
@@ -642,6 +774,12 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
                     CONF_HEATING_SOURCE_COMMAND_DEBOUNCE_DELAY: heating_source_command_debounce_delay,
                     CONF_AUXILIARY_WATER_PUMP_FOR_HEATING: auxiliary_water_pump_for_heating,
                     CONF_AUXILIARY_PUMP_BOOSTER_TIME: auxiliary_pump_booster_time,
+                    CONF_REFERENCE_TEMP_ACC1: reference_temp_acc1,
+                    CONF_REFERENCE_TEMP_ACC2: reference_temp_acc2,
+                    CONF_REFERENCE_TEMP_DHW: reference_temp_dhw,
+                    CONF_VOLUME_ACC1: volume_acc1,
+                    CONF_VOLUME_ACC2: volume_acc2,
+                    CONF_VOLUME_DHW: volume_dhw,
                     CONF_VALVE_OUTPUT_ACC_STRICT_MODE: valve_output_acc_strict_mode,
                     CONF_VALVE_INPUT_ACC_STRICT_MODE: valve_input_acc_strict_mode,
                     CONF_VALVE_INPUT_ACC_CLOSING_DELAY_WHEN_HEATING_SOURCE_STOP: valve_input_acc_closing_delay_when_heating_source_stop,
@@ -653,9 +791,14 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
                     CONF_VALVE_INPUT_ACC2: entity_valve_input_acc2,
                     CONF_VALVE_FROM_ACC_TO_HEAT_OR_DHW: entity_valve_from_acc_to_heat_or_dhw,
                     CONF_VALVE_OUTPUT_HEATING: entity_valve_output_heating,
-                    CONF_SENSOR_TEMP_ACC1: entity_temp_acc1,
-                    CONF_SENSOR_TEMP_ACC2: entity_temp_acc2,
-                    CONF_SENSOR_TEMP_DHW: entity_temp_dhw,
+                    CONF_SENSOR_TEMP_ACC1_TOP: entity_temp_acc1_top,
+                    CONF_SENSOR_TEMP_ACC1_MID: entity_temp_acc1_mid,
+                    CONF_SENSOR_TEMP_ACC1_BOTTOM: entity_temp_acc1_bottom,
+                    CONF_SENSOR_TEMP_ACC2_TOP: entity_temp_acc2_top,
+                    CONF_SENSOR_TEMP_ACC2_MID: entity_temp_acc2_mid,
+                    CONF_SENSOR_TEMP_ACC2_BOTTOM: entity_temp_acc2_bottom,
+                    CONF_SENSOR_TEMP_DHW_TOP: entity_temp_dhw_top,
+                    CONF_SENSOR_TEMP_DHW_BOTTOM: entity_temp_dhw_bottom,
                     CONF_WATER_PUMP_ACC_OUTPUT: entity_water_pump_acc_output,
                     CONF_WATER_PUMP_DHW: entity_water_pump_dhw,
                     CONF_WATER_PUMP_FLOOR_HEATING: entity_water_pump_floor_heating,

@@ -41,14 +41,14 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_control_parameters(user_input)
 
     async def async_step_control_parameters(self, user_input=None):
-        """Handle the step 1. - Control Parameters."""
+        """Handle step 1. - Control Parameters."""
         errors = {}
 
         if user_input is not None:
             # Uložiť dáta z predchádzajúceho kroku
             self._data.update(user_input)
             # Prejsť na ďalší krok
-            return await self.async_step_valve_control()
+            return await self.async_step_energy_calculator()
 
         # Display a form for Control Parameters
 
@@ -99,8 +99,55 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    async def async_step_energy_calculator(self, user_input=None):
+        """Handle step 2. - Stored Energy Calculator."""
+        errors = {}
+
+        if user_input is not None:
+            # Uložiť dáta z predchádzajúceho kroku
+            self._data.update(user_input)
+            # Prejsť na ďalší krok
+            return await self.async_step_valve_control()
+
+        # Display a form for Valve Control
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_REFERENCE_TEMP_ACC1,
+                    default=DEFAULT_REFERENCE_TEMP_ACC1,
+                ): NumberSelector(NumberSelectorConfig(min=1, max=50, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_REFERENCE_TEMP_ACC2,
+                    default=DEFAULT_REFERENCE_TEMP_ACC2,
+                ): NumberSelector(NumberSelectorConfig(min=1, max=50, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_REFERENCE_TEMP_DHW,
+                    default=DEFAULT_REFERENCE_TEMP_DHW,
+                ): NumberSelector(NumberSelectorConfig(min=1, max=50, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_VOLUME_ACC1,
+                    default=DEFAULT_VOLUME_ACC1,
+                ): NumberSelector(NumberSelectorConfig(min=1, max=10000, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_VOLUME_ACC2,
+                    default=DEFAULT_VOLUME_ACC2,
+                ): NumberSelector(NumberSelectorConfig(min=1, max=10000, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_VOLUME_DHW,
+                    default=DEFAULT_VOLUME_DHW,
+                ): NumberSelector(NumberSelectorConfig(min=1, max=10000, step=1, mode=NumberSelectorMode.BOX)),
+            }
+        )
+
+        return self.async_show_form(
+            step_id="energy_calculator",
+            data_schema=data_schema,
+            errors=errors,
+        )
+
     async def async_step_valve_control(self, user_input=None):
-        """Handle step 2. - Valve Control."""
+        """Handle step 3. - Valve Control."""
         errors = {}
 
         if user_input is not None:
@@ -139,7 +186,7 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_valves(self, user_input=None):
-        """Handle step 3. - Valves."""
+        """Handle step 4. - Valves."""
         errors = {}
 
         if user_input is not None:
@@ -190,7 +237,7 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_temperature_sensors(self, user_input=None):
-        """Handle step 4. - Temperature Sensors."""
+        """Handle step 5. - Temperature Sensors."""
         errors = {}
 
         if user_input is not None:
@@ -204,16 +251,36 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_SENSOR_TEMP_ACC1,
-                    default=DEFAULT_ENTITY_TEMP_ACC1,
+                    CONF_SENSOR_TEMP_ACC1_TOP,
+                    default=DEFAULT_ENTITY_TEMP_ACC1_TOP,
                 ): EntitySelector(EntitySelectorConfig(domain="sensor")),
                 vol.Required(
-                    CONF_SENSOR_TEMP_ACC2,
-                    default=DEFAULT_ENTITY_TEMP_ACC2,
+                    CONF_SENSOR_TEMP_ACC1_MID,
+                    default=DEFAULT_ENTITY_TEMP_ACC1_MID,
                 ): EntitySelector(EntitySelectorConfig(domain="sensor")),
                 vol.Required(
-                    CONF_SENSOR_TEMP_DHW,
-                    default=DEFAULT_ENTITY_TEMP_DHW,
+                    CONF_SENSOR_TEMP_ACC1_BOTTOM,
+                    default=DEFAULT_ENTITY_TEMP_ACC1_BOTTOM,
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_ACC2_TOP,
+                    default=DEFAULT_ENTITY_TEMP_ACC2_TOP,
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_ACC2_MID,
+                    default=DEFAULT_ENTITY_TEMP_ACC2_MID,
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_ACC2_BOTTOM,
+                    default=DEFAULT_ENTITY_TEMP_ACC2_BOTTOM,
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_DHW_TOP,
+                    default=DEFAULT_ENTITY_TEMP_DHW_TOP,
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_DHW_BOTTOM,
+                    default=DEFAULT_ENTITY_TEMP_DHW_BOTTOM,
                 ): EntitySelector(EntitySelectorConfig(domain="sensor")),
             }
         )
@@ -225,7 +292,7 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_pumps(self, user_input=None):
-        """Handle step 5. - Water Pumps."""
+        """Handle step 6. - Water Pumps."""
         errors = {}
 
         if user_input is not None:
@@ -264,7 +331,7 @@ class HeatingControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_thermostats(self, user_input=None):
-        """Handle step 6. - Thermostat States."""
+        """Handle step 7. - Thermostat States."""
         errors = {}
 
         if user_input is not None:
@@ -325,12 +392,12 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
         return await self.async_step_control_parameters(user_input)
 
     async def async_step_control_parameters(self, user_input=None):
-        """Manage the options - Control Parameters."""
+        """Handle step 1. - Control Parameters."""
         if user_input is not None:
             # Uložiť dáta z predchádzajúceho kroku
             self._data.update(user_input)
             # Prejsť na ďalší krok
-            return await self.async_step_valve_control()
+            return await self.async_step_energy_calculator()
 
         data_schema = vol.Schema(
             {
@@ -420,8 +487,79 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
 
         return self.async_show_form(step_id="control_parameters", data_schema=data_schema)
 
+    async def async_step_energy_calculator(self, user_input=None):
+        """Handle step 2. - Stored Energy Calculator."""
+        if user_input is not None:
+            # Uložiť dáta z predchádzajúceho kroku
+            if not hasattr(self, '_data'):
+                self._data = {}
+            self._data.update(user_input)
+            # Prejsť na ďalší krok
+            return await self.async_step_valve_control()
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_REFERENCE_TEMP_ACC1,
+                    default=self.config_entry.options.get(
+                        CONF_REFERENCE_TEMP_ACC1,
+                        self.config_entry.data.get(
+                            CONF_REFERENCE_TEMP_ACC1, DEFAULT_REFERENCE_TEMP_ACC1
+                        ),
+                    ),
+                ): NumberSelector(NumberSelectorConfig(min=1, max=50, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_REFERENCE_TEMP_ACC2,
+                    default=self.config_entry.options.get(
+                        CONF_REFERENCE_TEMP_ACC2,
+                        self.config_entry.data.get(
+                            CONF_REFERENCE_TEMP_ACC2, DEFAULT_REFERENCE_TEMP_ACC2
+                        ),
+                    ),
+                ): NumberSelector(NumberSelectorConfig(min=1, max=50, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_REFERENCE_TEMP_DHW,
+                    default=self.config_entry.options.get(
+                        CONF_REFERENCE_TEMP_DHW,
+                        self.config_entry.data.get(
+                            CONF_REFERENCE_TEMP_DHW, DEFAULT_REFERENCE_TEMP_DHW
+                        ),
+                    ),
+                ): NumberSelector(NumberSelectorConfig(min=1, max=50, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_VOLUME_ACC1,
+                    default=self.config_entry.options.get(
+                        CONF_VOLUME_ACC1,
+                        self.config_entry.data.get(
+                            CONF_VOLUME_ACC1, DEFAULT_VOLUME_ACC1
+                        ),
+                    ),
+                ): NumberSelector(NumberSelectorConfig(min=1, max=10000, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_VOLUME_ACC2,
+                    default=self.config_entry.options.get(
+                        CONF_VOLUME_ACC2,
+                        self.config_entry.data.get(
+                            CONF_VOLUME_ACC2, DEFAULT_VOLUME_ACC2
+                        ),
+                    ),
+                ): NumberSelector(NumberSelectorConfig(min=1, max=10000, step=1, mode=NumberSelectorMode.BOX)),
+                vol.Required(
+                    CONF_VOLUME_DHW,
+                    default=self.config_entry.options.get(
+                        CONF_VOLUME_DHW,
+                        self.config_entry.data.get(
+                            CONF_VOLUME_DHW, DEFAULT_VOLUME_DHW
+                        ),
+                    ),
+                ): NumberSelector(NumberSelectorConfig(min=1, max=10000, step=1, mode=NumberSelectorMode.BOX)),
+            }
+        )
+
+        return self.async_show_form(step_id="energy_calculator", data_schema=data_schema)
+
     async def async_step_valve_control(self, user_input=None):
-        """Manage the options - Valve control."""
+        """Handle step 3. - Valve Control."""
         if user_input is not None:
             # Uložiť dáta z predchádzajúceho kroku
             if not hasattr(self, '_data'):
@@ -476,7 +614,7 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(step_id="valve_control", data_schema=data_schema)
 
     async def async_step_valves(self, user_input=None):
-        """Manage the options - Valves."""
+        """Handle step 4. - Valves."""
         if user_input is not None:
             # Uložiť dáta z predchádzajúceho kroku
             if not hasattr(self, '_data'):
@@ -556,7 +694,7 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(step_id="valves", data_schema=data_schema)
 
     async def async_step_temperature_sensors(self, user_input=None):
-        """Manage the options - Temperature Sensors."""
+        """Handle step 5. - Temperature Sensors."""
         if user_input is not None:
             # Uložiť dáta z predchádzajúceho kroku
             if not hasattr(self, '_data'):
@@ -568,29 +706,74 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
         data_schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_SENSOR_TEMP_ACC1,
+                    CONF_SENSOR_TEMP_ACC1_TOP,
                     default=self.config_entry.options.get(
-                        CONF_SENSOR_TEMP_ACC1,
+                        CONF_SENSOR_TEMP_ACC1_TOP,
                         self.config_entry.data.get(
-                            CONF_SENSOR_TEMP_ACC1, DEFAULT_ENTITY_TEMP_ACC1
+                            CONF_SENSOR_TEMP_ACC1_TOP, DEFAULT_ENTITY_TEMP_ACC1_TOP
                         ),
                     ),
                 ): EntitySelector(EntitySelectorConfig(domain="sensor")),
                 vol.Required(
-                    CONF_SENSOR_TEMP_ACC2,
+                    CONF_SENSOR_TEMP_ACC1_MID,
                     default=self.config_entry.options.get(
-                        CONF_SENSOR_TEMP_ACC2,
+                        CONF_SENSOR_TEMP_ACC1_MID,
                         self.config_entry.data.get(
-                            CONF_SENSOR_TEMP_ACC2, DEFAULT_ENTITY_TEMP_ACC2
+                            CONF_SENSOR_TEMP_ACC1_MID, DEFAULT_ENTITY_TEMP_ACC1_MID
                         ),
                     ),
                 ): EntitySelector(EntitySelectorConfig(domain="sensor")),
                 vol.Required(
-                    CONF_SENSOR_TEMP_DHW,
+                    CONF_SENSOR_TEMP_ACC1_BOTTOM,
                     default=self.config_entry.options.get(
-                        CONF_SENSOR_TEMP_DHW,
+                        CONF_SENSOR_TEMP_ACC1_BOTTOM,
                         self.config_entry.data.get(
-                            CONF_SENSOR_TEMP_DHW, DEFAULT_ENTITY_TEMP_DHW
+                            CONF_SENSOR_TEMP_ACC1_BOTTOM, DEFAULT_ENTITY_TEMP_ACC1_BOTTOM
+                        ),
+                    ),
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_ACC2_TOP,
+                    default=self.config_entry.options.get(
+                        CONF_SENSOR_TEMP_ACC2_TOP,
+                        self.config_entry.data.get(
+                            CONF_SENSOR_TEMP_ACC2_TOP, DEFAULT_ENTITY_TEMP_ACC2_TOP
+                        ),
+                    ),
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_ACC2_MID,
+                    default=self.config_entry.options.get(
+                        CONF_SENSOR_TEMP_ACC2_MID,
+                        self.config_entry.data.get(
+                            CONF_SENSOR_TEMP_ACC2_MID, DEFAULT_ENTITY_TEMP_ACC2_MID
+                        ),
+                    ),
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_ACC2_BOTTOM,
+                    default=self.config_entry.options.get(
+                        CONF_SENSOR_TEMP_ACC2_BOTTOM,
+                        self.config_entry.data.get(
+                            CONF_SENSOR_TEMP_ACC2_BOTTOM, DEFAULT_ENTITY_TEMP_ACC2_BOTTOM
+                        ),
+                    ),
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_DHW_TOP,
+                    default=self.config_entry.options.get(
+                        CONF_SENSOR_TEMP_DHW_TOP,
+                        self.config_entry.data.get(
+                            CONF_SENSOR_TEMP_DHW_TOP, DEFAULT_ENTITY_TEMP_DHW_TOP
+                        ),
+                    ),
+                ): EntitySelector(EntitySelectorConfig(domain="sensor")),
+                vol.Required(
+                    CONF_SENSOR_TEMP_DHW_BOTTOM,
+                    default=self.config_entry.options.get(
+                        CONF_SENSOR_TEMP_DHW_BOTTOM,
+                        self.config_entry.data.get(
+                            CONF_SENSOR_TEMP_DHW_BOTTOM, DEFAULT_ENTITY_TEMP_DHW_BOTTOM
                         ),
                     ),
                 ): EntitySelector(EntitySelectorConfig(domain="sensor")),
@@ -601,7 +784,7 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
 
 
     async def async_step_pumps(self, user_input=None):
-        """Manage the options - Water Pumps."""
+        """Handle step 6. - Water Pumps."""
         if user_input is not None:
             # Uložiť dáta z predchádzajúceho kroku
             if not hasattr(self, '_data'):
@@ -654,7 +837,7 @@ class HeatingControllerOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(step_id="pumps", data_schema=data_schema)
 
     async def async_step_thermostats(self, user_input=None):
-        """Manage the options - Thermostat and Heating Pump States."""
+        """Handle step 7. - Thermostat States."""
         if user_input is not None:
             # Skombinuj dáta zo všetkých krokov
             if not hasattr(self, '_data'):

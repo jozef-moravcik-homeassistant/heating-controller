@@ -16,6 +16,18 @@
           "auxiliary_pump_booster_time": "Duration the auxiliary pump is on (in minutes)"
         }
       },
+      "energy_calculator": {
+        "title": "Energy Calculator parameters",
+        "description": "Setting parameters for Accumulated Energy Calculator",
+        "data": {
+          "reference_temp_acc1": "Reference temperature for ACC1",
+          "reference_temp_acc2": "Reference temperature for ACC2",
+          "reference_temp_dhw": "Reference temperature for DHW",
+          "volume_acc1": "Storage tank volume ACC1",
+          "volume_acc2": "Storage tank volume ACC2",
+          "volume_dhw": "DHW Water tank capacity"
+        }
+      },
       "valve_control": {
         "title": "Valve control parameters",
         "description": "Setting operating parameters for valve control",
@@ -91,6 +103,18 @@
           "heating_source_command_debounce_delay": "Heating source command debounce delay (in seconds)",
           "auxiliary_water_pump_for_heating": "Auxiliary pump for heating",
           "auxiliary_pump_booster_time": "Duration the auxiliary pump is on (in minutes)"
+        }
+      },
+      "energy_calculator": {
+        "title": "Energy Calculator parameters",
+        "description": "Setting parameters for Accumulated Energy Calculator",
+        "data": {
+          "reference_temp_acc1": "Reference temperature for ACC1",
+          "reference_temp_acc2": "Reference temperature for ACC2",
+          "reference_temp_dhw": "Reference temperature for DHW",
+          "volume_acc1": "Storage tank volume ACC1",
+          "volume_acc2": "Storage tank volume ACC2",
+          "volume_dhw": "DHW Water tank capacity"
         }
       },
       "valve_control": {
@@ -228,6 +252,21 @@
           "dhw_and_dhw_from_acc": "Heating DHW + DHW from ACC (water pumping)",
           "undefined": "Undefined"
         }
+      },
+      "acc1_stored_energy": {
+        "name": "Stored energy in ACC1"
+      },
+      "acc2_stored_energy": {
+        "name": "Stored energy in ACC2"
+      },
+      "acc_stored_energy": {
+        "name": "Stored energy in ACC"
+      },
+      "dhw_stored_energy": {
+        "name": "Stored energy in DHW"
+      },
+      "total_stored_energy": {
+        "name": "Total stored energy"
       }
     },
     "number": {

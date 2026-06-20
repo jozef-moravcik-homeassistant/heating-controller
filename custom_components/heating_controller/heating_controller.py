@@ -118,8 +118,12 @@ class Heating_Controller_Instance:
 
         self.preferred_output_ACC = 0
         self.preferred_input_ACC = 0
-        self.higher_temperature_acc_value = 0
-        self.lower_temperature_acc_value = 0
+        self.higher_temperature_acc_top_value = 0
+        self.lower_temperature_acc_top_value = 0
+        self.higher_temperature_acc_avg_value = 0
+        self.lower_temperature_acc_avg_value = 0
+        self._balancing_output_active = False
+        self._balancing_input_active = False
 
         self.heating_source_auto_on_off = False
         self.heating_operating_mode = HEATING_OPERATING_MODE_MANUAL
@@ -150,6 +154,13 @@ class Heating_Controller_Instance:
         heating_source_command_debounce_delay: int = DEFAULT_HEATING_SOURCE_COMMAND_DEBOUNCE_DELAY
         auxiliary_water_pump_for_heating: int = DEFAULT_AUXILIARY_WATER_PUMP_FOR_HEATING
         auxiliary_pump_booster_time: int = DEFAULT_AUXILIARY_PUMP_BOOSTER_TIME
+        # Nastavenie parametrov pre Stored Energy Calculator
+        reference_temp_acc1: int = DEFAULT_REFERENCE_TEMP_ACC1
+        reference_temp_acc2: int = DEFAULT_REFERENCE_TEMP_ACC2
+        reference_temp_dhw: int = DEFAULT_REFERENCE_TEMP_DHW
+        volume_acc1: int = DEFAULT_VOLUME_ACC1
+        volume_acc2: int = DEFAULT_VOLUME_ACC2
+        volume_dhw: int = DEFAULT_VOLUME_DHW
         # Konfiguračné parametre pre ovládanie ventilov
         valve_output_acc_strict_mode: int = DEFAULT_VALVE_OUTPUT_ACC_STRICT_MODE
         valve_input_acc_strict_mode: int = DEFAULT_VALVE_INPUT_ACC_STRICT_MODE
@@ -164,9 +175,14 @@ class Heating_Controller_Instance:
         entity_valve_from_acc_to_heat_or_dhw = DEFAULT_ENTITY_VALVE_FROM_ACC_TO_HEAT_OR_DHW
         entity_valve_output_heating = DEFAULT_ENTITY_VALVE_OUTPUT_HEATING
         # Entity teplotných senzorov
-        entity_temp_acc1 = DEFAULT_ENTITY_TEMP_ACC1
-        entity_temp_acc2 = DEFAULT_ENTITY_TEMP_ACC2
-        entity_temp_dhw = DEFAULT_ENTITY_TEMP_DHW
+        entity_temp_acc1_top = DEFAULT_ENTITY_TEMP_ACC1_TOP
+        entity_temp_acc1_mid = DEFAULT_ENTITY_TEMP_ACC1_MID
+        entity_temp_acc1_bottom = DEFAULT_ENTITY_TEMP_ACC1_BOTTOM
+        entity_temp_acc2_top = DEFAULT_ENTITY_TEMP_ACC2_TOP
+        entity_temp_acc2_mid = DEFAULT_ENTITY_TEMP_ACC2_MID
+        entity_temp_acc2_bottom = DEFAULT_ENTITY_TEMP_ACC2_BOTTOM
+        entity_temp_dhw_top = DEFAULT_ENTITY_TEMP_DHW_TOP
+        entity_temp_dhw_bottom = DEFAULT_ENTITY_TEMP_DHW_BOTTOM
         # Entity obehových čerpadiel
         entity_water_pump_acc_output = DEFAULT_ENTITY_WATER_PUMP_ACC_OUTPUT
         entity_water_pump_dhw = DEFAULT_ENTITY_WATER_PUMP_DHW
@@ -235,60 +251,151 @@ class Heating_Controller_Instance:
 
         # **** Get temperature sensor entities **************************************************************
             try:
-                temperature_acc1 = self.hass.states.get(self.settings.entity_temp_acc1)
-                temperature_acc2 = self.hass.states.get(self.settings.entity_temp_acc2)
-                temperature_dhw = self.hass.states.get(self.settings.entity_temp_dhw)
-                
+                temperature_acc1_top = self.hass.states.get(self.settings.entity_temp_acc1_top)
+                temperature_acc1_mid = self.hass.states.get(self.settings.entity_temp_acc1_mid)
+                temperature_acc1_bottom = self.hass.states.get(self.settings.entity_temp_acc1_bottom)
+                temperature_acc2_top = self.hass.states.get(self.settings.entity_temp_acc2_top)
+                temperature_acc2_mid = self.hass.states.get(self.settings.entity_temp_acc2_mid)
+                temperature_acc2_bottom = self.hass.states.get(self.settings.entity_temp_acc2_bottom)
+                temperature_dhw_top = self.hass.states.get(self.settings.entity_temp_dhw_top)
+                temperature_dhw_bottom = self.hass.states.get(self.settings.entity_temp_dhw_bottom)
+
                 # Check if Temperature sensor entities exist
-                if temperature_acc1 is None:
-                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc1} does not exist!")
+                if temperature_acc1_top is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc1_top} does not exist!")
                     return
 
-                if temperature_acc2 is None:
-                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc2} does not exist!")
+                if temperature_acc1_mid is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc1_mid} does not exist!")
                     return
 
-                if temperature_dhw is None:
-                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_dhw} does not exist!")
+                if temperature_acc1_bottom is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc1_bottom} does not exist!")
+                    return
+
+                if temperature_acc2_top is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc2_top} does not exist!")
+                    return
+
+                if temperature_acc2_mid is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc2_mid} does not exist!")
+                    return
+
+                if temperature_acc2_bottom is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_acc2_bottom} does not exist!")
+                    return
+
+                if temperature_dhw_top is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_dhw_top} does not exist!")
+                    return
+
+                if temperature_dhw_bottom is None:
+                    LOGGER.error(f"Temperature sensor {self.settings.entity_temp_dhw_bottom} does not exist!")
                     return
                 
                 # Check if Temperature sensor entities are available
-                if temperature_acc1.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    if temperature_acc1.state == STATE_UNKNOWN:
-                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc1} is not available (state: {temperature_acc1.state})")
+                if temperature_acc1_top.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_acc1_top.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc1_top} is not available (state: {temperature_acc1_top.state})")
                     else:
-                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc1} is not available (state: {temperature_acc1.state})")
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc1_top} is not available (state: {temperature_acc1_top.state})")
                     return
 
-                if temperature_acc2.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    if temperature_acc2.state == STATE_UNKNOWN:
-                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc2} is not available (state: {temperature_acc2.state})")
+                if temperature_acc1_mid.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_acc1_mid.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc1_mid} is not available (state: {temperature_acc1_mid.state})")
                     else:
-                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc2} is not available (state: {temperature_acc2.state})")
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc1_mid} is not available (state: {temperature_acc1_mid.state})")
                     return
 
-                if temperature_dhw.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
-                    if temperature_dhw.state == STATE_UNKNOWN:
-                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_dhw} is not available (state: {temperature_dhw.state})")
+                if temperature_acc1_bottom.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_acc1_bottom.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc1_bottom} is not available (state: {temperature_acc1_bottom.state})")
                     else:
-                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_dhw} is not available (state: {temperature_dhw.state})")
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc1_bottom} is not available (state: {temperature_acc1_bottom.state})")
+                    return
+
+                if temperature_acc2_top.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_acc2_top.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc2_top} is not available (state: {temperature_acc2_top.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc2_top} is not available (state: {temperature_acc2_top.state})")
+                    return
+
+                if temperature_acc2_mid.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_acc2_mid.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc2_mid} is not available (state: {temperature_acc2_mid.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc2_mid} is not available (state: {temperature_acc2_mid.state})")
+                    return
+
+                if temperature_acc2_bottom.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_acc2_bottom.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_acc2_bottom} is not available (state: {temperature_acc2_bottom.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_acc2_bottom} is not available (state: {temperature_acc2_bottom.state})")
+                    return
+
+                if temperature_dhw_top.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_dhw_top.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_dhw_top} is not available (state: {temperature_dhw_top.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_dhw_top} is not available (state: {temperature_dhw_top.state})")
+                    return
+                
+                if temperature_dhw_bottom.state in [STATE_UNAVAILABLE, STATE_UNKNOWN, STATE_NONE, None]:
+                    if temperature_dhw_bottom.state == STATE_UNKNOWN:
+                        LOGGER.debug(f"Temperature sensor {self.settings.entity_temp_dhw_bottom} is not available (state: {temperature_dhw_bottom.state})")
+                    else:
+                        LOGGER.warning(f"Temperature sensor {self.settings.entity_temp_dhw_bottom} is not available (state: {temperature_dhw_bottom.state})")
                     return
                 
                 # Convert to float
-                temperature_acc1_value = float(temperature_acc1.state)
-                temperature_acc2_value = float(temperature_acc2.state)
-                temperature_dhw_value = float(temperature_dhw.state)
-                self.higher_temperature_acc_value = float((temperature_acc1_value + temperature_acc2_value) / 2.00)
-                self.lower_temperature_acc_value = float(min(temperature_acc1_value, temperature_acc2_value))
+                temperature_acc1_top_value = float(temperature_acc1_top.state)
+                temperature_acc1_mid_value = float(temperature_acc1_mid.state)
+                temperature_acc1_bottom_value = float(temperature_acc1_bottom.state)
+                temperature_acc2_top_value = float(temperature_acc2_top.state)
+                temperature_acc2_mid_value = float(temperature_acc2_mid.state)
+                temperature_acc2_bottom_value = float(temperature_acc2_bottom.state)
+                temperature_dhw_top_value = float(temperature_dhw_top.state)
+                temperature_dhw_bottom_value = float(temperature_dhw_bottom.state)
+
+                temperature_acc1_avg_value = ((temperature_acc1_top_value + temperature_acc1_mid_value) / 2)
+                temperature_acc2_avg_value = ((temperature_acc2_top_value + temperature_acc2_mid_value) / 2)
+                temperature_dhw_avg_value = ((temperature_dhw_top_value + temperature_dhw_bottom_value) / 2)
                 
-                LOGGER.debug("Temperature sensor values: temperature_acc1_value=%f, temperature_acc2_value=%f, temperature_dhw_value=%f",
-                            temperature_acc1_value, temperature_acc2_value, temperature_dhw_value)
+                temperature_acc1_full_avg_value = ((temperature_acc1_top_value + temperature_acc1_mid_value + temperature_acc1_bottom_value) / 3)
+                temperature_acc2_full_avg_value = ((temperature_acc2_top_value + temperature_acc2_mid_value + temperature_acc2_bottom_value) / 3)
+                temperature_dhw_full_avg_value = ((temperature_dhw_top_value + temperature_dhw_bottom_value) / 2)
+
+                LOGGER.debug("Temperature sensor values: temperature_acc1_top_value=%f, temperature_acc1_mid_value=%f, temperature_acc1_bottom_value=%f, temperature_acc1_avg_value=%f, temperature_acc2_top_value=%f, temperature_acc2_mid_value=%f, temperature_acc2_bottom_value=%f, temperature_acc2_avg_value=%f, temperature_dhw_avg_value=%f, temperature_dhw_top_value=%f, temperature_dhw_bottom_value=%f, temperature_acc1_full_avg_value=%f, temperature_acc2_full_avg_value=%f, temperature_dhw_full_avg_value=%f",
+                                temperature_acc1_top_value, temperature_acc1_mid_value, temperature_acc1_bottom_value, temperature_acc1_avg_value, temperature_acc2_top_value, temperature_acc2_mid_value, temperature_acc2_bottom_value, temperature_acc2_avg_value, temperature_dhw_avg_value, temperature_dhw_top_value, temperature_dhw_bottom_value, temperature_acc1_full_avg_value, temperature_acc2_full_avg_value, temperature_dhw_full_avg_value)
+
+                LOGGER.debug("Energy Settings: volume_acc1=%d, volume_acc2=%d, volume_dhw=%d, reference_temp_acc1=%f, reference_temp_acc2=%f, reference_temp_dhw=%f",
+                                self.settings.volume_acc1, self.settings.volume_acc2, self.settings.volume_dhw, self.settings.reference_temp_acc1, self.settings.reference_temp_acc2, self.settings.reference_temp_dhw)
+
+                stored_energy_acc1 = self._get_stored_energy(temperature_acc1_full_avg_value, self.settings.volume_acc1, self.settings.reference_temp_acc1)
+                stored_energy_acc2 = self._get_stored_energy(temperature_acc2_full_avg_value, self.settings.volume_acc2, self.settings.reference_temp_acc2)
+                stored_energy_dhw = self._get_stored_energy(temperature_dhw_full_avg_value, self.settings.volume_dhw, self.settings.reference_temp_dhw)
+                stored_energy_acc = stored_energy_acc2 + stored_energy_acc1
+                stored_energy_total = stored_energy_acc1 + stored_energy_acc2 + stored_energy_dhw
+
+                self.sensor_states[ENTITY_ACC1_STORED_ENERGY] = stored_energy_acc1
+                self.sensor_states[ENTITY_ACC2_STORED_ENERGY] = stored_energy_acc2
+                self.sensor_states[ENTITY_DHW_STORED_ENERGY] = stored_energy_dhw
+                self.sensor_states[ENTITY_ACC_STORED_ENERGY] = stored_energy_acc
+                self.sensor_states[ENTITY_TOTAL_STORED_ENERGY] = stored_energy_total
 
             except (ValueError, TypeError) as e:
                 LOGGER.error(f"Could not convert temperature sensors to float: {e}")
-                LOGGER.error(f"ACC1: {temperature_acc1.state if temperature_acc1 else 'None'}")
-                LOGGER.error(f"ACC2: {temperature_acc2.state if temperature_acc2 else 'None'}")
-                LOGGER.error(f"DHW: {temperature_dhw.state if temperature_dhw else 'None'}")
+                LOGGER.error(f"ACC1-top: {temperature_acc1_top.state if temperature_acc1_top else 'None'}")
+                LOGGER.error(f"ACC1-mid: {temperature_acc1_mid.state if temperature_acc1_mid else 'None'}")
+                LOGGER.error(f"ACC1-bottom: {temperature_acc1_bottom.state if temperature_acc1_bottom else 'None'}")
+                LOGGER.error(f"ACC2-top: {temperature_acc2_top.state if temperature_acc2_top else 'None'}")
+                LOGGER.error(f"ACC2-mid: {temperature_acc2_mid.state if temperature_acc2_mid else 'None'}")
+                LOGGER.error(f"ACC2-bottom: {temperature_acc2_bottom.state if temperature_acc2_bottom else 'None'}")
+                LOGGER.error(f"DHW-top: {temperature_dhw_top.state if temperature_dhw_top else 'None'}")
+                LOGGER.error(f"DHW-bottom: {temperature_dhw_bottom.state if temperature_dhw_bottom else 'None'}")
                 return
 
         # **** Get Valve Objects ****************************************************************************
@@ -506,61 +613,129 @@ class Heating_Controller_Instance:
             # u vypnuteho zasobnika, tak sa docasne povoli odcerpanie teplej vody,
             # dokial sa teplota neznizi, ale vstup do zasobnika bude uz uzatvoreny
             # Toto plati aj pre kurenie a aj pre DHW
-            self.preferred_output_ACC = 0
-            self.preferred_input_ACC = 0
-            self.higher_temperature_acc_value = float((temperature_acc1_value + temperature_acc2_value) / 2.00)
-            self.lower_temperature_acc_value = float(min(temperature_acc1_value, temperature_acc2_value))
+            self.higher_temperature_acc_top_value = float((temperature_acc1_top_value + temperature_acc2_top_value) / 2.00)
+            self.lower_temperature_acc_top_value = float(min(temperature_acc1_top_value, temperature_acc2_top_value))
 
-            if (abs(temperature_acc1_value - temperature_acc2_value) > self.settings.temperature_delta_limit_in_acc):
+            _delta_top = abs(temperature_acc1_top_value - temperature_acc2_top_value)
+            _activation_threshold_top = self.settings.temperature_delta_limit_in_acc + FIXED_HYSTERESIS_1
+            _deactivation_threshold_top = self.settings.temperature_delta_limit_in_acc - FIXED_HYSTERESIS_1
+
+            # Hysterezia: aktivacia pri prekroceni horneho prahu, deaktivacia pri klesnutí pod dolny prah
+            if (not self._balancing_output_active):
+                if (_delta_top > _activation_threshold_top):
+                    self._balancing_output_active = True
+                    LOGGER.debug("ACC output balancing activated (delta_top=%.2f > activation_threshold=%.2f)", _delta_top, _activation_threshold_top)
+            else:
+                if (_delta_top < _deactivation_threshold_top):
+                    self._balancing_output_active = False
+                    LOGGER.debug("ACC output balancing deactivated (delta_top=%.2f < deactivation_threshold=%.2f)", _delta_top, _deactivation_threshold_top)
+
+            if (self._balancing_output_active):
                 if (self.acc1_enable and self.acc2_enable):
-                    if (temperature_acc1_value > temperature_acc2_value):
-                        self.higher_temperature_acc_value = temperature_acc1_value
-                        self.lower_temperature_acc_value = temperature_acc2_value
-                        self.preferred_input_ACC = 2
+                    if (temperature_acc1_top_value > temperature_acc2_top_value):
+                        self.higher_temperature_acc_top_value = temperature_acc1_top_value
+                        self.lower_temperature_acc_top_value = temperature_acc2_top_value
                         self.preferred_output_ACC = 1
                     else:
-                        self.higher_temperature_acc_value = temperature_acc2_value
-                        self.lower_temperature_acc_value = temperature_acc1_value
-                        self.preferred_input_ACC = 1
+                        self.higher_temperature_acc_top_value = temperature_acc2_top_value
+                        self.lower_temperature_acc_top_value = temperature_acc1_top_value
                         self.preferred_output_ACC = 2
                 elif (self.acc1_enable and (not self.acc2_enable)):
-                    self.preferred_input_ACC = 1
-                    if (temperature_acc2_value > self.settings.disabled_acc_temperature_limit):
-                        if (temperature_acc2_value > temperature_acc1_value):
+                    if (temperature_acc2_top_value > self.settings.disabled_acc_temperature_limit):
+                        if (temperature_acc2_top_value > temperature_acc1_top_value):
                             self.preferred_output_ACC = 2
-                            self.higher_temperature_acc_value = temperature_acc2_value
-                            self.lower_temperature_acc_value = temperature_acc1_value
+                            self.higher_temperature_acc_top_value = temperature_acc2_top_value
+                            self.lower_temperature_acc_top_value = temperature_acc1_top_value
                         else:
                             self.preferred_output_ACC = 1
-                            self.higher_temperature_acc_value = temperature_acc1_value
-                            self.lower_temperature_acc_value = temperature_acc2_value
+                            self.higher_temperature_acc_top_value = temperature_acc1_top_value
+                            self.lower_temperature_acc_top_value = temperature_acc2_top_value
                     else:
                         self.preferred_output_ACC = 1
-                        self.higher_temperature_acc_value = temperature_acc1_value
-                        self.lower_temperature_acc_value = temperature_acc1_value
+                        self.higher_temperature_acc_top_value = temperature_acc1_top_value
+                        self.lower_temperature_acc_top_value = temperature_acc1_top_value
                 elif ((not self.acc1_enable) and self.acc2_enable):
-                    self.preferred_input_ACC = 2
-                    if (temperature_acc1_value > self.settings.disabled_acc_temperature_limit):
-                        if (temperature_acc1_value > temperature_acc2_value):
+                    if (temperature_acc1_top_value > self.settings.disabled_acc_temperature_limit):
+                        if (temperature_acc1_top_value > temperature_acc2_top_value):
                             self.preferred_output_ACC = 1
-                            self.higher_temperature_acc_value = temperature_acc1_value
-                            self.lower_temperature_acc_value = temperature_acc2_value
+                            self.higher_temperature_acc_top_value = temperature_acc1_top_value
+                            self.lower_temperature_acc_top_value = temperature_acc2_top_value
                         else:
                             self.preferred_output_ACC = 2
-                            self.higher_temperature_acc_value = temperature_acc2_value
-                            self.lower_temperature_acc_value = temperature_acc1_value
+                            self.higher_temperature_acc_top_value = temperature_acc2_top_value
+                            self.lower_temperature_acc_top_value = temperature_acc1_top_value
                     else:
                         self.preferred_output_ACC = 2
-                        self.higher_temperature_acc_value = temperature_acc2_value
-                        self.lower_temperature_acc_value = temperature_acc2_value
+                        self.higher_temperature_acc_top_value = temperature_acc2_top_value
+                        self.lower_temperature_acc_top_value = temperature_acc2_top_value
+            else:
+                self.preferred_output_ACC = 0
 
-            temperature_acc_with_offset = self.higher_temperature_acc_value - self.settings.temperature_delta_limit_acc_dhw
+            temperature_acc_top_with_offset = self.higher_temperature_acc_top_value - self.settings.temperature_delta_limit_acc_dhw
 
             # ak je v ACC nizsia teplota nez pouzitelna na kurenie (zadefinovana v nastaveniach), tak anuluje hodnoty v premenych z termostatov kurenia
-            if(self.higher_temperature_acc_value < self.settings.min_temperature_for_heating - DEFAULT_HYSTERESIS_MIN_TEMPERATURE_FOR_HEATING):
+            if(self.higher_temperature_acc_top_value < self.settings.min_temperature_for_heating - DEFAULT_HYSTERESIS_MIN_TEMPERATURE_FOR_HEATING):
                 self.min_acc_temperature_for_heating_limit_broken = True
-            elif(self.higher_temperature_acc_value >= self.settings.min_temperature_for_heating):
+            elif(self.higher_temperature_acc_top_value >= self.settings.min_temperature_for_heating):
                 self.min_acc_temperature_for_heating_limit_broken = False
+
+    # ******************************************************************************************************
+    # *** VYPOCET PREFEROVANEHO ZASOBNIKA ACC PRE OHREV TEPLEJ VODY ****************************************
+    # ******************************************************************************************************
+
+            self.higher_temperature_acc_avg_value = float((temperature_acc1_avg_value + temperature_acc2_avg_value) / 2.00)
+            self.lower_temperature_acc_avg_value = float(min(temperature_acc1_avg_value, temperature_acc2_avg_value))
+
+            _delta_avg = abs(temperature_acc1_avg_value - temperature_acc2_avg_value)
+            _activation_threshold_avg = self.settings.temperature_delta_limit_in_acc + FIXED_HYSTERESIS_1
+            _deactivation_threshold_avg = self.settings.temperature_delta_limit_in_acc - FIXED_HYSTERESIS_1
+
+            # Hysterezia: aktivacia pri prekroceni horneho prahu, deaktivacia pri klesnutí pod dolny prah
+            if (not self._balancing_input_active):
+                if (_delta_avg > _activation_threshold_avg):
+                    self._balancing_input_active = True
+                    LOGGER.debug("ACC input balancing activated (delta_avg=%.2f > activation_threshold=%.2f)", _delta_avg, _activation_threshold_avg)
+            else:
+                if (_delta_avg < _deactivation_threshold_avg):
+                    self._balancing_input_active = False
+                    LOGGER.debug("ACC input balancing deactivated (delta_avg=%.2f < deactivation_threshold=%.2f)", _delta_avg, _deactivation_threshold_avg)
+
+            if (self._balancing_input_active):
+                if (self.acc1_enable and self.acc2_enable):
+                    if (temperature_acc1_avg_value > temperature_acc2_avg_value):
+                        self.higher_temperature_acc_avg_value = temperature_acc1_avg_value
+                        self.lower_temperature_acc_avg_value = temperature_acc2_avg_value
+                        self.preferred_input_ACC = 2
+                    else:
+                        self.higher_temperature_acc_avg_value = temperature_acc2_avg_value
+                        self.lower_temperature_acc_avg_value = temperature_acc1_avg_value
+                        self.preferred_input_ACC = 1
+                elif (self.acc1_enable and (not self.acc2_enable)):
+                    self.preferred_input_ACC = 1
+                    if (temperature_acc2_avg_value > self.settings.disabled_acc_temperature_limit):
+                        if (temperature_acc2_avg_value > temperature_acc1_avg_value):
+                            self.higher_temperature_acc_avg_value = temperature_acc2_avg_value
+                            self.lower_temperature_acc_avg_value = temperature_acc1_avg_value
+                        else:
+                            self.higher_temperature_acc_avg_value = temperature_acc1_avg_value
+                            self.lower_temperature_acc_avg_value = temperature_acc2_avg_value
+                    else:
+                        self.higher_temperature_acc_avg_value = temperature_acc1_avg_value
+                        self.lower_temperature_acc_avg_value = temperature_acc1_avg_value
+                elif ((not self.acc1_enable) and self.acc2_enable):
+                    self.preferred_input_ACC = 2
+                    if (temperature_acc1_avg_value > self.settings.disabled_acc_temperature_limit):
+                        if (temperature_acc1_avg_value > temperature_acc2_avg_value):
+                            self.higher_temperature_acc_avg_value = temperature_acc1_avg_value
+                            self.lower_temperature_acc_avg_value = temperature_acc2_avg_value
+                        else:
+                            self.higher_temperature_acc_avg_value = temperature_acc2_avg_value
+                            self.lower_temperature_acc_avg_value = temperature_acc1_avg_value
+                    else:
+                        self.higher_temperature_acc_avg_value = temperature_acc2_avg_value
+                        self.lower_temperature_acc_avg_value = temperature_acc2_avg_value
+            else:
+                self.preferred_input_ACC = 0
 
     # ******************************************************************************************************
     # *** 1. ÚROVEŇ AUTOMATIKY KÚRENIA (sekvenčné módy, priority, atď. *************************************
@@ -604,16 +779,16 @@ class Heating_Controller_Instance:
                 if (self.settings.valve_input_acc_strict_mode != VALVE_MODE_STRICT):
                     await self.switch_to_dhw()
 
-                # Ak je v TUV teplota vyssia nez 2. uroven ziadanej teploty
-                if ((self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))) or (not self.heating_source_input_on_off)):
+                # Ak je v TUV priemerná teplota vyssia nez 2. uroven ziadanej teploty
+                if ((self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))) or (not self.heating_source_input_on_off)):
                     # vypne ohrev
                     self.heating_source_auto_on_off = False
                     # a ak je striktny mod, pretoci ventil do ACC
                     if (self.settings.valve_input_acc_strict_mode == VALVE_MODE_STRICT):
                         await self.switch_to_acc()
 
-                # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                elif(self.dhw_target_temperature > (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                elif(self.dhw_target_temperature > (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                     # zapne ohrev TUV
                     self.heating_source_auto_on_off = True
                     # a v striktnom mode pretoci ventil do TUV
@@ -636,8 +811,8 @@ class Heating_Controller_Instance:
                     # pri vstupe do tohot rezimu sa stopne precerpavanie z ACC do TUV
                     await self.stop_heat_dhw_from_acc()
 
-                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
 
                         # prepne sa na ventil z TC na ACC a vypne sa zdroj kurenia
                         await self.switch_to_acc()
@@ -649,10 +824,10 @@ class Heating_Controller_Instance:
                 if (self.settings.valve_input_acc_strict_mode != VALVE_MODE_STRICT):
                     await self.switch_to_dhw()
 
-                # Ak je v ACC vyssia teplota nez v TUV
-                if (temperature_acc_with_offset > temperature_dhw_value):
-                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                # Ak je v ACC vyssia teplota nez priemerná teplota v TUV
+                if (temperature_acc_top_with_offset > temperature_dhw_avg_value):
+                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                         if (not self.heat_dhw_from_acc_onetime_start_flag0):
                             self.heat_dhw_from_acc_onetime_start_flag0 = 1
                             # ak nie je zablokovane precerpavanie z ACC do TUV
@@ -668,11 +843,11 @@ class Heating_Controller_Instance:
 
                 # Ak je v ACC teplota nizsia, alebo rovna nez v TUV (precerpavanie sa vypne automaticky v inej casti programu)
                 else:
-                    # resetuje jenorazove spustenie precerpavania (kvoli casovacu)
+                    # resetuje jednorazove spustenie precerpavania (kvoli casovacu)
                     self.heat_dhw_from_acc_onetime_start_flag0 = 0
                     self.pdhw_blocker = True
-                    # Ak je v TUV teplota vyssia nez 2. uroven ziadanej teploty
-                    if ((self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))) or (not self.heating_source_input_on_off)):
+                    # Ak je v TUV priemerná teplota vyssia nez 2. uroven ziadanej teploty
+                    if ((self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))) or (not self.heating_source_input_on_off)):
                         # vypne ohrev
                         self.heating_source_auto_on_off = False
                         self.pdhw_blocker = False
@@ -680,8 +855,8 @@ class Heating_Controller_Instance:
                         if (self.settings.valve_input_acc_strict_mode == VALVE_MODE_STRICT):
                             await self.switch_to_acc()
 
-                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                    elif(self.dhw_target_temperature > (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                    elif(self.dhw_target_temperature > (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                         # zapne ohrev TUV
                         self.heating_source_auto_on_off = True
                         # a v striktnom mode pretoci ventil do TUV
@@ -708,9 +883,9 @@ class Heating_Controller_Instance:
 
                 await self.switch_to_acc()
 
-                if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                     self.heating_source_auto_on_off = False
-                elif(self.acc_target_temperature > (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                elif(self.acc_target_temperature > (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                     self.heating_source_auto_on_off = True
 
                 self.temperature_setpoint = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
@@ -733,19 +908,19 @@ class Heating_Controller_Instance:
 
                 await self.switch_to_acc()
 
-                if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                     self.heating_source_auto_on_off = False
-                elif(self.acc_target_temperature > (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                elif(self.acc_target_temperature > (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                     self.heating_source_auto_on_off = True
 
                 self.temperature_setpoint = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
                 self.temperature_setpoint_hp = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
 
-                # Ak je v ACC vyssia teplota nez v TUV
-                # ***** (Ak je v ACC teplota rovna, alebo nizsia nez v TUV, alebo teplota dosiahne cielovu hodnotu, precerpavanie sa vypne automaticky (nie tu, ale v inej casti programu)
-                if (temperature_acc_with_offset > temperature_dhw_value):
-                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                # Ak je v ACC vyssia teplota nez priemerná teplota v TUV
+                # ***** (Ak je v ACC teplota rovna, alebo nizsia nez priemerná teplota v TUV, alebo teplota dosiahne cielovu hodnotu, precerpavanie sa vypne automaticky (nie tu, ale v inej casti programu)
+                if (temperature_acc_top_with_offset > temperature_dhw_avg_value):
+                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                         # zapne sa precerpavanie z ACC do TUV
                         await self.start_heat_dhw_from_acc()
 
@@ -762,8 +937,8 @@ class Heating_Controller_Instance:
                     # pri vstupe do tohot rezimu sa stopne precerpavanie z ACC do TUV
                     await self.stop_heat_dhw_from_acc()
 
-                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
 
                         # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                         await self.switch_to_dhw()
@@ -780,10 +955,10 @@ class Heating_Controller_Instance:
                     self.temperature_setpoint = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
                     # # Pre tepelné čerpadlo sa prednastavi cieľová teplota teplota pre TUV + hysterézia
                     # self.temperature_setpoint_hp = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
-                    # # Ak je v DHW nižšia teplota než v ACC
-                    # if(temperature_dhw_value < self.lower_temperature_acc_value):
+                    # # Ak je v DHW nižšia priemerná teplota než v ACC
+                    # if(temperature_dhw_avg_value < self.lower_temperature_acc_top_value):
                     #     # Ak je v ACC teplota nižšia nez 1. uroven ziadanej teploty
-                    #     if(self.acc_target_temperature > (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    #     if(self.acc_target_temperature > (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                     #         # Pre zdroj kurenia sa nastavi 2. uroven ziadanej teploty pre ACC
                     #         self.temperature_setpoint_hp = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
 
@@ -798,14 +973,14 @@ class Heating_Controller_Instance:
 
                     if(flag_0):
 
-                        # Ak teplota v TUV prekroci 2. uroven ziadanej teploty
-                        if(self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                        # Ak priemerná teplota v TUV prekroci 2. uroven ziadanej teploty
+                        if(self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
 
                             # Tak sa prepne na ohrev ACC
                             await self.switch_to_acc()
 
                             # Ak je v ACC teplota vyssia, nez 2. uroven ziadanej teploty
-                            if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                            if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
 
                                 # vypne sa zdroj kurenia
                                 self.heating_source_auto_on_off = False
@@ -817,10 +992,10 @@ class Heating_Controller_Instance:
                     self.temperature_setpoint = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
                     # # Pre tepelné čerpadlo sa prednastavi 2. uroven ziadanej teploty pre ACC
                     # self.temperature_setpoint_hp = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
-                    # # Ak je v DHW vyššia teplota než v ACC
-                    # if(temperature_dhw_value > self.lower_temperature_acc_value):
-                    #     # Ak je v TUV teplota nižšia, nez 1. uroven ziadanej teploty
-                    #     if(self.dhw_target_temperature > (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    # # Ak je v DHW vyššia priemerná teplota než v ACC
+                    # if(temperature_dhw_avg_value > self.lower_temperature_acc_top_value):
+                    #     # Ak je v TUV priemerná teplota nižšia, nez 1. uroven ziadanej teploty
+                    #     if(self.dhw_target_temperature > (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                     #         # Pre zdroj kurenia sa nastavi 2. uroven ziadanej teploty pre DHW
                     #         self.temperature_setpoint_hp = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
 
@@ -828,16 +1003,16 @@ class Heating_Controller_Instance:
                     if (self.heating_source_input_on_off == True):
                         
                         # Ak je v ACC teplota vyssia nez 1. uroven ziadanej teploty
-                        if(self.acc_target_temperature < (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                        if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                             
                             # Ak je v ACC teplota vyssia, nez 2. uroven ziadanej teploty
-                            if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                            if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                                 
                                 # ak bol zdroj teploty uz zapnuty (z predchadzajucej sekvencie) tak bude pokracovat v kureni az do dosiahnutia 2. urovne ziadanej teploty
                                 if(self.heating_source_auto_on_off):
 
-                                    # Ak je v TUV teplota vyssia, nez 2. uroven ziadanej teploty
-                                    if(self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                                    # Ak je v TUV priemerná teplota vyssia, nez 2. uroven ziadanej teploty
+                                    if(self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                                         
                                         # vypne sa zdroj kurenia
                                         self.heating_source_auto_on_off = False
@@ -851,8 +1026,8 @@ class Heating_Controller_Instance:
                                 # ak bol zdroj teploty uz vypnuty (z predchadzajucej sekvencie) tak sa zapne az po znizeni teploty TUV pod 1. uroven ziadanej teploty
                                 else:
 
-                                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                                    if not (self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                                    if not (self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
 
                                         # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                         await self.switch_to_dhw()
@@ -861,8 +1036,8 @@ class Heating_Controller_Instance:
                             # Ak je v ACC teplota nizsia, nez 2. uroven ziadanej teploty
                             else:
 
-                                # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                                if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                                # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                                if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                                     
                                     # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                     await self.switch_to_dhw()
@@ -874,13 +1049,13 @@ class Heating_Controller_Instance:
                             # zapne sa zdroj kurenia
                             self.heating_source_auto_on_off = True
 
-                            # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                            if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                            # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                            if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                                 # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                 await self.switch_to_dhw()
 
-                            # Ak je v TUV teplota vyssia, nez 2. uroven ziadanej teploty
-                            if(self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                            # Ak je v TUV priemerná teplota vyssia, nez 2. uroven ziadanej teploty
+                            if(self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                                 # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                 await self.switch_to_acc()
 
@@ -896,8 +1071,8 @@ class Heating_Controller_Instance:
                     # pri vstupe do tohot rezimu sa stopne precerpavanie z ACC do TUV
                     await self.stop_heat_dhw_from_acc()
 
-                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
 
                         # prepne sa na ohrev ACC a vypne sa zdroj kurenia
                         await self.switch_to_acc()
@@ -907,11 +1082,11 @@ class Heating_Controller_Instance:
 
                 self.temperature_setpoint_hp = MAX_TEMPERATURE_LIMIT_HP
 
-                # Ak je v ACC vyssia teplota nez v TUV
-                if (temperature_acc_with_offset > temperature_dhw_value):
+                # Ak je v ACC vyssia teplota nez priemerná teplota v TUV
+                if (temperature_acc_top_with_offset > temperature_dhw_avg_value):
 
-                    # Ak je v TUV teplota vyssia nez 1. uroven ziadanej teploty
-                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                    # Ak je v TUV priemerná teplota vyssia nez 1. uroven ziadanej teploty
+                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
 
                         # zapne sa precerpavanie z ACC do TUV
                         # ventil sa presmeruje zo zdroja kurenia do ACC
@@ -920,10 +1095,10 @@ class Heating_Controller_Instance:
                         self.temperature_setpoint = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
                         # # Pre tepelné čerpadlo sa prednastavi 2. uroven ziadanej teploty pre ACC
                         # self.temperature_setpoint_hp = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
-                        # # Ak je v DHW vyššia teplota než v ACC
-                        # if(temperature_dhw_value > self.lower_temperature_acc_value):
-                        #     # Ak je v TUV teplota vyssia, nez 1. uroven ziadanej teploty
-                        #     if(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                        # # Ak je v DHW vyššia priemerná teplota než v ACC
+                        # if(temperature_dhw_avg_value > self.lower_temperature_acc_top_value):
+                        #     # Ak je v TUV priemerná teplota vyssia, nez 1. uroven ziadanej teploty
+                        #     if(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                         #         # Pre zdroj kurenia sa nastavi 2. uroven ziadanej teploty pre DHW
                         #         self.temperature_setpoint_hp = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
 
@@ -940,12 +1115,13 @@ class Heating_Controller_Instance:
 
 
                         # Ak je v ACC vyssia teplota nez 2. uroven ziadanej teploty
-                        if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                        if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                             # vypne sa zdroj kurenia
                             self.heating_source_auto_on_off = False
 
                         # Ak je v ACC teplota nizsia nez 1. uroven ziadanej teploty
-                        if(self.acc_target_temperature < (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+#                        if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                        if(self.acc_target_temperature > (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                             # zapne sa zdroj kurenia
                             self.heating_source_auto_on_off = True
 
@@ -982,10 +1158,10 @@ class Heating_Controller_Instance:
                         self.temperature_setpoint = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
                         # # Pre tepelné čerpadlo sa prednastavi cieľová teplota teplota pre TUV + hysterézia
                         # self.temperature_setpoint_hp = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
-                        # # Ak je v DHW nižšia teplota než v ACC
-                        # if(temperature_dhw_value < self.lower_temperature_acc_value):
+                        # # Ak je v DHW nižšia priemerná teplota než v ACC
+                        # if(temperature_dhw_avg_value < self.lower_temperature_acc_top_value):
                         #     # Ak je v ACC teplota nižšia nez 1. uroven ziadanej teploty
-                        #     if(self.acc_target_temperature > (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                        #     if(self.acc_target_temperature > (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                         #         # Pre zdroj kurenia sa nastavi 2. uroven ziadanej teploty pre ACC
                         #         self.temperature_setpoint_hp = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
 
@@ -1000,8 +1176,8 @@ class Heating_Controller_Instance:
                         
                         if(flag_0):
                     
-                            # Ak teplota v TUV prekroci 2. uroven ziadanej teploty
-                            if(self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                            # Ak priemerná teplota v TUV prekroci 2. uroven ziadanej teploty
+                            if(self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
 
                                 # odblokuje sa precerpavanie z ACC do TUV lebo TUV dosiahlo cielovu teplotu
                                 # Toto je opatrenie kvoli cykleniu, kedy by po premiesani vody v TUV system opakovane vypinal TC, spustal precerpavanie a potom opakovane zapinal TC 
@@ -1011,7 +1187,7 @@ class Heating_Controller_Instance:
                                 await self.switch_to_acc()
 
                                 # Ak je v ACC teplota vyssia, nez 2. uroven ziadanej teploty
-                                if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                                if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
 
                                     # vypne sa zdroj kurenia
                                     self.heating_source_auto_on_off = False
@@ -1023,10 +1199,10 @@ class Heating_Controller_Instance:
                         self.temperature_setpoint = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
                         # Pre tepelné čerpadlo sa prednastavi 2. uroven ziadanej teploty pre ACC
                         # self.temperature_setpoint_hp = self.acc_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
-                        # # Ak je v DHW vyššia teplota než v ACC
-                        # if(temperature_dhw_value > self.lower_temperature_acc_value):
-                        #     # Ak je v TUV teplota nižšia, nez 1. uroven ziadanej teploty
-                        #     if(self.dhw_target_temperature > (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                        # # Ak je v DHW vyššia priemerná teplota než v ACC
+                        # if(temperature_dhw_avg_value > self.lower_temperature_acc_top_value):
+                        #     # Ak je v TUV priemerná teplota nižšia, nez 1. uroven ziadanej teploty
+                        #     if(self.dhw_target_temperature > (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                         #         # Pre zdroj kurenia sa nastavi 2. uroven ziadanej teploty pre DHW
                         #         self.temperature_setpoint_hp = self.dhw_target_temperature + (self.settings.heating_source_temp_hysteresis / 2)
 
@@ -1034,16 +1210,16 @@ class Heating_Controller_Instance:
                         if (self.heating_source_input_on_off == True):
                             
                             # Ak je v ACC teplota vyssia nez 1. uroven ziadanej teploty
-                            if(self.acc_target_temperature < (self.lower_temperature_acc_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                            if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                                 
                                 # Ak je v ACC teplota vyssia, nez 2. uroven ziadanej teploty
-                                if(self.acc_target_temperature < (self.lower_temperature_acc_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                                if(self.acc_target_temperature < (self.lower_temperature_acc_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                                     
                                     # ak bol zdroj teploty uz zapnuty (z predchadzajucej sekvencie) tak bude pokracovat v kureni az do dosiahnutia 2. urovne ziadanej teploty
                                     if(self.heating_source_auto_on_off):
 
-                                        # Ak je v TUV teplota vyssia, nez 2. uroven ziadanej teploty
-                                        if(self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                                        # Ak je v TUV priemerná teplota vyssia, nez 2. uroven ziadanej teploty
+                                        if(self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                                             
                                             # vypne sa zdroj kurenia
                                             self.heating_source_auto_on_off = False
@@ -1057,8 +1233,8 @@ class Heating_Controller_Instance:
                                     # ak bol zdroj teploty uz vypnuty (z predchadzajucej sekvencie) tak sa zapne az po znizeni teploty TUV pod 1. uroven ziadanej teploty
                                     else:
 
-                                        # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                                        if not (self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                                        # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                                        if not (self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
 
                                             # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                             await self.switch_to_dhw()
@@ -1067,8 +1243,8 @@ class Heating_Controller_Instance:
                                 # Ak je v ACC teplota nizsia, nez 2. uroven ziadanej teploty
                                 else:
                                     
-                                    # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                                    if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                                    # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                                    if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                                         
                                         # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                         await self.switch_to_dhw()
@@ -1080,13 +1256,13 @@ class Heating_Controller_Instance:
                                 # zapne sa zdroj kurenia
                                 self.heating_source_auto_on_off = True
 
-                                # Ak je v TUV teplota nizsia nez 1. uroven ziadanej teploty
-                                if not(self.dhw_target_temperature < (temperature_dhw_value + (self.settings.heating_source_temp_hysteresis / 2))):
+                                # Ak je v TUV priemerná teplota nizsia nez 1. uroven ziadanej teploty
+                                if not(self.dhw_target_temperature < (temperature_dhw_avg_value + (self.settings.heating_source_temp_hysteresis / 2))):
                                     # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                     await self.switch_to_dhw()
 
-                                # Ak je v TUV teplota vyssia, nez 2. uroven ziadanej teploty
-                                if(self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2))):
+                                # Ak je v TUV priemerná teplota vyssia, nez 2. uroven ziadanej teploty
+                                if(self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2))):
                                     # prepne sa na ohrev TUV a zapne sa zdroj kurenia
                                     await self.switch_to_acc()
 
@@ -1115,6 +1291,12 @@ class Heating_Controller_Instance:
             else:
                 self.sensor_states[ENTITY_CONTROL_COMMAND_TEMPERATURE] = self.temperature_setpoint
 
+            # Nastavenie fixnej teploty (horny teplotny limit cielovej teploty pre TC)
+            # Tym sa rusi sposob nastavenia teploty zavisly od prednastavenej teploty (vyzera to tak, ze pre TC je to lepsie)
+            # Po otestovani sa to musi zahrnut do konfiguracie a novej verzie Heating Controller-a
+            self.temperature_setpoint_hp = MAX_TEMPERATURE_LIMIT_HP
+
+
             if(self.temperature_setpoint_hp > MAX_TEMPERATURE_LIMIT_HP):
                 self.sensor_states[ENTITY_CONTROL_COMMAND_HP_TEMPERATURE] = MAX_TEMPERATURE_LIMIT_HP
             elif(self.temperature_setpoint_hp < 25):
@@ -1126,9 +1308,14 @@ class Heating_Controller_Instance:
             if(self.heating_source_input_on_off):
                 if(self.heating_source_auto_on_off):
                     if(
-                        (temperature_acc1_value <= MAX_TEMPERATURE_LIMIT) and
-                        (temperature_acc2_value <= MAX_TEMPERATURE_LIMIT) and
-                        (temperature_dhw_value <= MAX_TEMPERATURE_LIMIT)
+                        (temperature_acc1_top_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc1_mid_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc1_bottom_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc2_top_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc2_mid_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc2_bottom_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_dhw_top_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_dhw_bottom_value <= MAX_TEMPERATURE_LIMIT)
                         ):
                         if(self.heating_operating_mode==HEATING_OPERATING_MODE_MANUAL):
                             if (valve_from_hp_to_acc_or_dhw.state == STATE_HP_ACC):
@@ -1144,9 +1331,14 @@ class Heating_Controller_Instance:
             if(self.heating_source_input_on_off):
                 if(self.heating_source_auto_on_off):
                     if(
-                        (temperature_acc1_value <= MAX_TEMPERATURE_LIMIT) and
-                        (temperature_acc2_value <= MAX_TEMPERATURE_LIMIT) and
-                        (temperature_dhw_value <= MAX_TEMPERATURE_LIMIT)
+                        (temperature_acc1_top_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc1_mid_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc1_bottom_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc2_top_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc2_mid_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_acc2_bottom_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_dhw_top_value <= MAX_TEMPERATURE_LIMIT) and
+                        (temperature_dhw_bottom_value <= MAX_TEMPERATURE_LIMIT)
                         ):
                         if(self.heating_operating_mode==HEATING_OPERATING_MODE_MANUAL):
                             if (valve_from_hp_to_acc_or_dhw.state == STATE_HP_ACC):
@@ -1228,12 +1420,12 @@ class Heating_Controller_Instance:
     # *** AUTOMATICKE VYPNUTIE PRECERPAVANIA Z ACC DO DHW, KED SA DOSIAHNE V DHW TEPLOTA, KTORA JE V ACC ***
     # ******************************************************************************************************
 
-            # Ak teplota v DHW dosiahne teplotu v ((ACC1 alebo ACC2) - offset), alebo
-            # ak teplota v TUV prekroci 2. uroven teploty voči žiadanej teplote
+            # Ak priemerná teplota v DHW dosiahne teplotu v ((ACC1 alebo ACC2) - offset), alebo
+            # ak priemerná teplota v TUV prekroci 2. uroven teploty voči žiadanej teplote
             # tak sa vypne switch.heat_dhw_from_acc
             if (
-                (temperature_acc_with_offset <= temperature_dhw_value) or
-                (self.dhw_target_temperature < (temperature_dhw_value - (self.settings.heating_source_temp_hysteresis / 2)))
+                (temperature_acc_top_with_offset <= temperature_dhw_avg_value) or
+                (self.dhw_target_temperature < (temperature_dhw_avg_value - (self.settings.heating_source_temp_hysteresis / 2)))
                 ):
                     await self.stop_heat_dhw_from_acc()
 
@@ -1265,8 +1457,8 @@ class Heating_Controller_Instance:
     # ******************************************************************************************************
 
             self.valve_output_acc1_flag = 0
-            # ak je ACC1 zapnuté, alebo ak je teplota v ACC1 vyššia než minimálna povolená teplota pre kúrenie
-            if ((self.acc1_enable) or (temperature_acc1_value > self.settings.disabled_acc_temperature_limit)):
+            # ak je ACC1 zapnuté, alebo ak je teplota v ACC1-top vyššia než minimálna povolená teplota pre kúrenie
+            if ((self.acc1_enable) or (temperature_acc1_top_value > self.settings.disabled_acc_temperature_limit)):
                 # ak nie je preferencia ACC, alebo je preferované ACC1
                 if (self.preferred_output_ACC==0) or (self.preferred_output_ACC==1):
                     # ak je zapnuté prečerpávanie z ACC do DHW
@@ -1316,8 +1508,8 @@ class Heating_Controller_Instance:
     # ******************************************************************************************************
 
             self.valve_output_acc2_flag = 0
-            # ak je ACC2 zapnuté, alebo ak je teplota v ACC2 vyššia než minimálna povolená teplota pre kúrenie
-            if ((self.acc2_enable) or (temperature_acc2_value > self.settings.disabled_acc_temperature_limit)):
+            # ak je ACC2 zapnuté, alebo ak je teplota v ACC2-top vyššia než minimálna povolená teplota pre kúrenie
+            if ((self.acc2_enable) or (temperature_acc2_top_value > self.settings.disabled_acc_temperature_limit)):
                 # ak nie je preferencia ACC, alebo je preferované ACC2
                 if (self.preferred_output_ACC==0) or (self.preferred_output_ACC==2):
                     # ak je zapnuté prečerpávanie z ACC do DHW
@@ -1891,3 +2083,40 @@ class Heating_Controller_Instance:
         self._hp_dhw_to_acc_switch_allowed = True
         # Spustiť kontrolný cyklus aby sa ventil pretočil
         self.hass.async_create_task(self.heating_control_system())
+
+    @staticmethod
+    def _get_stored_energy(temp_avg, volume_liters, ref_temp) -> float:
+        """
+        Vypočíta akumulovanú energiu v kWh s vysokou presnosťou.
+        temp_avg: float (priemerná teplota v nádrži)
+        volume_liters: int (menovitý objem nádrže v litroch)
+        ref_temp: int (referenčná teplota, pod ktorou je energia 0)
+        """
+        
+        # Ak je teplota pod referenčnou, nepovažujem to za využiteľnú energiu
+        if temp_avg <= ref_temp:
+            return 0.0
+
+        # 1. HUSTOTA VODY (rho) v kg/m3
+        # Polynomická aproximácia (od 5°C do 100°C)
+        # Zohľadňuje, že voda pri 80°C "zaberie viac miesta", teda v nádrži je menej kg vody.
+        rho = (1.1044e-5 * temp_avg**3 - 5.1256e-3 * temp_avg**2 + 1.2587e-2 * temp_avg + 1000.1)
+
+        # Prepočet objemu na metre kubické a následne na hmotnosť v kg
+        volume_m3 = volume_liters / 1000.0
+        mass_kg = volume_m3 * rho
+
+        # 2. MERNÁ TEPELNÁ KAPACITA (cp) v kJ/(kg·K)
+        # Presnejší polynomický model namiesto konštanty 4.186
+        cp = (-1.51e-7 * temp_avg**3 + 3.69e-5 * temp_avg**2 - 2.18e-3 * temp_avg + 4.214)
+
+        # 3. VÝPOČET TEPLA (Q)
+        # Q = m * cp * delta_T  (výsledok v kiloJouloch)
+        delta_t = temp_avg - ref_temp
+        energy_kj = mass_kg * cp * delta_t
+
+        # 4. PREVOD NA kWh
+        # 1 kWh = 3600 kJ
+        energy_kwh = energy_kj / 3600.0
+
+        return round(energy_kwh, 2)

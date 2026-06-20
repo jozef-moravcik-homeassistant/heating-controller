@@ -60,6 +60,16 @@ async def _load_translations(hass: HomeAssistant) -> dict:
     
     return await hass.async_add_executor_job(_load_file)
 
+
+def _coerce_value(value: float, step: float) -> int | float:
+    """Ak je krok celé číslo, vráť int aby HA nezobrazoval desatinné miesto."""
+    if value is None:
+        return value
+    if step == int(step):
+        return int(value)
+    return value
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -84,7 +94,7 @@ async def async_setup_entry(
             step = 1.0,
             default_value = DEFAULT_DHW_TARGET_TEMPERATURE,
             enabled_by_default = True,
-            mode = NumberMode.SLIDER,
+            mode = NumberMode.BOX,
             native_unit_of_measurement = "°C",
         ),
         NumberEntityDefinition(
@@ -99,7 +109,7 @@ async def async_setup_entry(
             step = 1.0,
             default_value = DEFAULT_ACC_TARGET_TEMPERATURE,
             enabled_by_default = True,
-            mode = NumberMode.SLIDER,
+            mode = NumberMode.BOX,
             native_unit_of_measurement = "°C",
         ),
     ]
@@ -178,7 +188,8 @@ class NumberEntityDefinition(NumberEntity, RestoreEntity):
         self._attr_native_step = step
         self._attr_mode = mode
         self._default_value = default_value
-        self._attr_native_value = default_value
+        # Uložiť ako int ak je krok celé číslo → HA nezobrazí desatinné miesto
+        self._attr_native_value = _coerce_value(default_value, step)
         self._attr_entity_registry_enabled_default = enabled_by_default
         self._attr_entity_registry_visible_default = enabled_by_default
 
@@ -197,13 +208,14 @@ class NumberEntityDefinition(NumberEntity, RestoreEntity):
         last_state = await self.async_get_last_state()
         if last_state is not None and last_state.state not in (None, "unknown", "unavailable"):
             try:
-                self._attr_native_value = float(last_state.state)
+                restored = float(last_state.state)
+                self._attr_native_value = _coerce_value(restored, self._attr_native_step)
                 LOGGER.debug(f"Restored state for {self.entity_id}: {self._attr_native_value}")
             except (ValueError, TypeError):
-                self._attr_native_value = self._default_value
+                self._attr_native_value = _coerce_value(self._default_value, self._attr_native_step)
                 LOGGER.debug(f"Failed to restore state for {self.entity_id}, using default: {self._default_value}")
         else:
-            self._attr_native_value = self._default_value
+            self._attr_native_value = _coerce_value(self._default_value, self._attr_native_step)
             LOGGER.debug(f"No saved state for {self.entity_id}, using default: {self._default_value}")
 
         # Subscribe to updates
@@ -222,6 +234,6 @@ class NumberEntityDefinition(NumberEntity, RestoreEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Set the value of the number entity."""
-        self._attr_native_value = value
+        self._attr_native_value = _coerce_value(value, self._attr_native_step)
         self.async_write_ha_state()
-        LOGGER.debug(f"Number {self.entity_id} set to {value}")
+        LOGGER.debug(f"Number {self.entity_id} set to {self._attr_native_value}")
